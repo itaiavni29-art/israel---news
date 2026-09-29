@@ -10,19 +10,27 @@ let data = null; // last events.json
 //
 // The branch URL (raw.githubusercontent.com/<repo>/data/…) is served from a CDN that can return copies
 // that are hours old. So we first ask the GitHub API for the branch's current commit and then download
-// the file by that commit id — a URL that can never be stale. Unauthenticated API calls are limited to
-// 60/hour per visitor, hence a 2-minute refresh (30/hour); if the limit is hit we fall back to the branch URL.
+// the file by that commit id — a URL that can never be stale.
+// Unauthenticated API calls are limited to 60/hour per visitor, but a conditional request answered with
+// 304 ("not changed") does not count. So we check every 30 seconds with the last ETag and download only
+// when a new scan was published (every ~3 minutes ≈ 20 counted calls per hour).
 const PAGES = location.hostname.endsWith('.github.io');
 const REPO = PAGES ? `${location.hostname.split('.')[0]}/${location.pathname.split('/')[1]}` : null;
-const REFRESH_MS = PAGES ? 120_000 : 60_000;
+const REFRESH_MS = 30_000;
 let dataRef = 'data';
+let refEtag = null;
 
+/** @returns {Promise<boolean>} true when there may be new data to download */
 async function resolveRef() {
-  if (!PAGES) return;
+  if (!PAGES) return true;
   try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/commits/data`, { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
-    if (r.ok) dataRef = (await r.text()).trim();
-  } catch { /* keep the last known ref */ }
+    const headers = { Accept: 'application/vnd.github.sha' };
+    if (refEtag) headers['If-None-Match'] = refEtag;
+    const r = await fetch(`https://api.github.com/repos/${REPO}/commits/data`, { headers, cache: 'no-store' });
+    if (r.status === 304) return false;
+    if (r.ok) { dataRef = (await r.text()).trim(); refEtag = r.headers.get('ETag'); return true; }
+  } catch { /* network hiccup: keep the last known ref */ }
+  return data == null; // rate-limited or offline: only try the download if we have nothing yet
 }
 const dataUrl = name => (PAGES ? `https://raw.githubusercontent.com/${REPO}/${dataRef}/${name}` : `${name}?t=${Date.now()}`);
 
@@ -61,7 +69,7 @@ const dot = color => el('span', { class: 'dot', style: `background:${color}`, 'a
 // ---------- data ----------
 async function load() {
   try {
-    await resolveRef();
+    if (!(await resolveRef()) && data && !data.error) return; // nothing new since the last check
     const r = await fetch(dataUrl('events.json'), { cache: 'no-store' });
     if (r.status === 404) { data = { events: [], lastScanAt: null }; return; } // first scan not finished yet
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -202,13 +210,35 @@ window.addEventListener('hashchange', async () => {
   else { window.scrollTo(0, 0); app.focus({ preventScroll: true }); }
 });
 
+let busy = false;
 async function tick() {
-  const y = await route();
-  window.scrollTo(0, y); // periodic refresh keeps the reader's place
+  if (busy) return;
+  busy = true;
+  try {
+    const y = await route();
+    window.scrollTo(0, y); // automatic refresh keeps the reader's place
+  } finally { busy = false; }
 }
 
-// Keep relative times fresh and pull new events periodically.
+// When a new version of the site itself is published, reload so nobody is stuck on old code.
+let appVersion = null;
+async function checkAppVersion() {
+  try {
+    const r = await fetch('app.js', { method: 'HEAD', cache: 'no-store' });
+    const v = r.headers.get('ETag') ?? r.headers.get('Last-Modified');
+    if (appVersion && v && v !== appVersion) location.reload();
+    appVersion ??= v;
+  } catch { /* offline */ }
+}
+
+// Pull new events automatically: every 30 s, and right away when the page comes back into view
+// (switching tabs, unlocking the phone, reopening the home-screen app, reconnecting).
 await route();
+checkAppVersion();
 setInterval(tick, REFRESH_MS);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+setInterval(checkAppVersion, 10 * 60_000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); checkAppVersion(); } });
+window.addEventListener('pageshow', e => { if (e.persisted) tick(); });
+window.addEventListener('online', tick);
+window.addEventListener('focus', tick);
 
