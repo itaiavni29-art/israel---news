@@ -1,5 +1,6 @@
 # Publishes the web page (public/) to GitHub Pages whenever it changes.
 # The page itself reads the latest events from the `data` branch, so it does not need redeploying per scan.
+# One-time setup: Settings → Pages → Source: "GitHub Actions".
 name: פרסום האתר
 
 on:
