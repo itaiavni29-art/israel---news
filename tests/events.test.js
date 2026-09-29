@@ -102,6 +102,23 @@ test('disabling a source removes its articles; events left with one source are d
   assert.deepEqual(new Set(s.active[0].articles.map(a => a.sourceId)), new Set(['ynet', 'maariv']));
 });
 
+test('two events that are really one story are merged; the older detection time is kept', () => {
+  const unit = (x, y) => { const v = new Float32Array(64); v[0] = x; v[1] = y; const n = Math.hypot(x, y); return v.map(z => z / n); };
+  const mk = (src, vec) => ({ ...art(src, 0), vec });
+  const s = store(); // threshold 0.89: vectors below are ~0.86 apart, so they start as two events
+  const first = [mk('ynet', unit(1, 0)), mk('maariv', unit(1, 0))];
+  const second = [mk('haaretz', unit(0.86, 0.51)), mk('globes', unit(0.86, 0.51))];
+  s.update(first, 1000);
+  s.update([...first, ...second], 2000);
+  assert.equal(s.active.length, 2);
+  // Evidence arrives that they are one story (modelled here by relaxing the threshold): they merge.
+  s.similarityThreshold = 0.85;
+  s.update([], 3000);
+  assert.equal(s.active.length, 1);
+  assert.equal(s.active[0].detectedAt, 1000);
+  assert.equal(s.active[0].articles.length, 4);
+});
+
 test('headline: prefers Hebrew, then the shortest among the most representative', () => {
   const ev = { articles: [
     { ...art('jpost', 60, 'Netanyahu met Trump at the White House'), hebrew: false },

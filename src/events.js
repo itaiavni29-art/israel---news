@@ -74,6 +74,9 @@ export class EventStore {
       created.push(ev);
     }
 
+    // 3b. Merge events that turned out to be the same story (e.g. a new headline bridged two of them).
+    for (const merged of this.mergeDuplicates()) { updated.add(merged.into); created.splice(0, created.length, ...created.filter(e => e !== merged.gone)); updated.delete(merged.gone); }
+
     // 4. Enforce the cap: retire by oldest detection time (ties → the one whose news is stalest).
     this.active.sort((a, b) => b.detectedAt - a.detectedAt || latest(b) - latest(a));
     while (this.active.length > this.maxEvents) {
@@ -86,6 +89,33 @@ export class EventStore {
 
     this.prune(now);
     return { created: created.filter(e => this.active.includes(e)), updated: [...updated], retired };
+  }
+
+  /**
+   * Merge active events whose articles are, on average, similar enough to be one story — the same
+   * average-margin rule used everywhere else. The merged event keeps the OLDER detection time, so its
+   * position in the list does not change. Repeats until no pair qualifies.
+   * @returns {{into: object, gone: object}[]}
+   */
+  mergeDuplicates() {
+    const merges = [];
+    for (;;) {
+      let best = null, bestScore = 0;
+      for (let i = 0; i < this.active.length; i++)
+        for (let j = i + 1; j < this.active.length; j++) {
+          let s = 0;
+          for (const a of this.active[i].articles) s += this.avgMargin(a, this.active[j].articles);
+          s /= this.active[i].articles.length;
+          if (s >= bestScore) { bestScore = s; best = [this.active[i], this.active[j]]; }
+        }
+      if (!best) return merges;
+      const [into, gone] = best[0].detectedAt <= best[1].detectedAt ? best : [best[1], best[0]];
+      into.articles.push(...gone.articles);
+      into.lastUpdatedAt = Math.max(into.lastUpdatedAt, gone.lastUpdatedAt);
+      for (const a of gone.articles) this.assigned.set(a.key, into.id);
+      this.active = this.active.filter(e => e !== gone);
+      merges.push({ into, gone });
+    }
   }
 
   // Average-linkage agglomerative clustering on margins.
