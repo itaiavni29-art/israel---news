@@ -127,7 +127,7 @@ export class Scanner {
       },
       sources: this.config.sources.filter(s => s.enabled !== false).map(s => ({
         id: s.id, name: s.name, color: s.color,
-        feeds: s.feeds.map(url => ({ url, ...(feedState[url] ?? { lastOkAt: null, failures: 0, lastError: null, items: 0 }) })),
+        feeds: [...s.feeds, ...(s.breakingFeeds ?? [])].map(url => ({ url, ...(feedState[url] ?? { lastOkAt: null, failures: 0, lastError: null, items: 0 }) })),
       })),
     };
   }
