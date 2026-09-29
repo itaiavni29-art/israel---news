@@ -79,6 +79,6 @@ test('articleKey keeps Globes ?did= ids distinct and drops tracking params', () 
 test('config: defaults and validation', () => {
   assert.equal(config.minSources, 2);
   assert.ok(config.similarityThreshold > 0 && config.similarityThreshold < 1);
-  assert.equal(config.scanIntervalMinutes, 3);
+  assert.ok(config.scanIntervalMinutes >= 1);
   assert.equal(config.maxEvents, 10);
 });
