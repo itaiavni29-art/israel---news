@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>חדשות ישראל</title>
+  <meta name="description" content="החדשות שמסוקרות עכשיו במספר מקורות">
+  <meta name="theme-color" content="#0038b8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a href="#/" class="brand"><h1>חדשות ישראל <span class="flag" aria-hidden="true">🇮🇱</span></h1></a>
+      <p class="subtitle">החדשות שמסוקרות עכשיו במספר מקורות</p>
+      <p class="scan-status" id="scan-status" aria-live="polite"></p>
+    </div>
+  </header>
+
+  <main class="wrap" id="app" tabindex="-1"></main>
+
+  <footer class="wrap site-footer">
+    <p>האתר לא מעתיק כתבות. הוא מציג רק כותרות וקישורים, ומפנה לאתרים המקוריים.</p>
+    <p><a href="#/status">מצב המקורות</a></p>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

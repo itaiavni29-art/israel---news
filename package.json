@@ -1,0 +1,21 @@
+{
+  "name": "israel-news",
+  "version": "1.0.0",
+  "description": "חדשות ישראל — אירועים שמסוקרים בכמה מקורות",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "eval": "node scripts/eval.js",
+    "snapshot": "node scripts/snapshot.js",
+    "scan": "node scripts/scan-once.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "fast-xml-parser": "^4.5.7"
+  }
+}

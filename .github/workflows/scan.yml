@@ -1,0 +1,62 @@
+# Runs one news scan every ~5 minutes (GitHub's minimum; under load runs can be delayed).
+# State between runs (events, ETags) and the published events.json live in the `data` branch,
+# which is replaced by a single fresh commit on every run so the history does not grow.
+name: סריקת חדשות
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: news-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Cache the embedding model (~130 MB, downloaded once)
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: models-${{ hashFiles('config.json') }}
+          restore-keys: models-
+
+      - name: Restore previous state from the data branch
+        run: |
+          mkdir -p data
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            git archive FETCH_HEAD | tar -x -C data
+          else
+            echo "No data branch yet — first run starts fresh."
+          fi
+
+      - name: Scan
+        run: node scripts/scan-once.js data
+
+      - name: Publish to the data branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd data
+          [ -f events.json ] || { echo "nothing to publish"; exit 0; }
+          git init -q -b data
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "scan $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data:data
