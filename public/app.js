@@ -1,17 +1,30 @@
 // חדשות ישראל — client. Plain DOM (no framework); all text goes through textContent (no HTML injection).
 const app = document.getElementById('app');
 const statusEl = document.getElementById('scan-status');
-const REFRESH_MS = 60_000;
 const NEW_MS = 10 * 60_000;
 
 let data = null; // last events.json
 
 // Where the scan results live. On GitHub Pages (<owner>.github.io/<repo>/) the scan workflow publishes
 // them to the repository's `data` branch; locally, server.js writes them next to this page.
-const DATA_BASE = location.hostname.endsWith('.github.io')
-  ? `https://raw.githubusercontent.com/${location.hostname.split('.')[0]}/${location.pathname.split('/')[1]}/data/`
-  : '';
-const dataUrl = name => `${DATA_BASE}${name}?t=${Math.floor(Date.now() / 60_000)}`;
+//
+// The branch URL (raw.githubusercontent.com/<repo>/data/…) is served from a CDN that can return copies
+// that are hours old. So we first ask the GitHub API for the branch's current commit and then download
+// the file by that commit id — a URL that can never be stale. Unauthenticated API calls are limited to
+// 60/hour per visitor, hence a 2-minute refresh (30/hour); if the limit is hit we fall back to the branch URL.
+const PAGES = location.hostname.endsWith('.github.io');
+const REPO = PAGES ? `${location.hostname.split('.')[0]}/${location.pathname.split('/')[1]}` : null;
+const REFRESH_MS = PAGES ? 120_000 : 60_000;
+let dataRef = 'data';
+
+async function resolveRef() {
+  if (!PAGES) return;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/commits/data`, { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
+    if (r.ok) dataRef = (await r.text()).trim();
+  } catch { /* keep the last known ref */ }
+}
+const dataUrl = name => (PAGES ? `https://raw.githubusercontent.com/${REPO}/${dataRef}/${name}` : `${name}?t=${Date.now()}`);
 
 // ---------- helpers ----------
 function el(tag, attrs = {}, ...children) {
@@ -48,6 +61,7 @@ const dot = color => el('span', { class: 'dot', style: `background:${color}`, 'a
 // ---------- data ----------
 async function load() {
   try {
+    await resolveRef();
     const r = await fetch(dataUrl('events.json'), { cache: 'no-store' });
     if (r.status === 404) { data = { events: [], lastScanAt: null }; return; } // first scan not finished yet
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
