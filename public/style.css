@@ -109,3 +109,6 @@ a { color: var(--accent); }
 .source-article + .source-article { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
 .source-item .site { display: flex; align-items: center; gap: 6px; }
 .scan-status.stale { color: #b54708; font-weight: 600; }
+.badge-hot { background: color-mix(in srgb, #d9480f 14%, transparent); color: #d9480f; font-weight: 700; border-radius: 999px; padding: 1px 9px; font-size: .78rem; }
+.coverage.single { color: var(--muted); font-weight: 600; }
+.hot-why { font-weight: 400; }

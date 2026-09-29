@@ -7,7 +7,7 @@ import { EventStore, pickHeadline, presentEvent } from '../src/events.js';
 // Unit vector pointing mostly along axis `topic` — same topic ⇒ cosine ≈ 0.995, different ⇒ ≈ 0.
 function vec(topic, jitter = 0) {
   const v = new Float32Array(64);
-  v[topic] = 1;
+  v[topic % 64] = 1;
   v[(topic + 17 + jitter) % 64] = 0.1;
   const n = Math.hypot(...v);
   return v.map(x => x / n);
@@ -117,6 +117,50 @@ test('two events that are really one story are merged; the older detection time 
   assert.equal(s.active.length, 1);
   assert.equal(s.active[0].detectedAt, 1000);
   assert.equal(s.active[0].articles.length, 4);
+});
+
+test('quiet 10 minutes → one "hot" single-source story is added; not earlier, not more often', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ singleSourceFallbackMs: 10 * MIN });
+  const fresh = (src, topic) => ({ ...art(src, topic), publishedAt: T0 });
+  s.update([fresh('ynet', 90), fresh('maariv', 90)], T0);          // a real event → timer starts
+  assert.equal(s.active.length, 1);
+  const pool = [fresh('haaretz', 91)];
+  assert.equal(s.update(pool, T0 + 5 * MIN).single, null);           // only 5 quiet minutes
+  const r = s.update(pool, T0 + 10 * MIN);                           // 10 quiet minutes
+  assert.ok(r.single);
+  assert.equal(r.single.provisional, true);
+  assert.equal(s.update([...pool, fresh('globes', 92)], T0 + 13 * MIN).single, null); // next one only after another 10
+});
+
+test('a hot single-source story becomes a normal event (moved to the top) when a second site covers it', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ singleSourceFallbackMs: 10 * MIN });
+  const a = { ...art('ynet', 93), publishedAt: T0 };
+  const r = s.update([a], T0 + 10 * MIN);
+  assert.ok(r.single);
+  const r2 = s.update([a, { ...art('haaretz', 93), publishedAt: T0 }], T0 + 12 * MIN);
+  assert.equal(r2.created.length, 1);
+  const ev = s.active.find(e => e.id === r.single.id);
+  assert.equal(ev.provisional, undefined);
+  assert.equal(ev.detectedAt, T0 + 12 * MIN);
+});
+
+test('hottest: a story the site wrote several articles on beats a lone newer headline', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ singleSourceFallbackMs: 10 * MIN });
+  const lone = { ...art('ynet', 95), publishedAt: T0 + 9 * MIN, breaking: true };
+  const twoA = { ...art('maariv', 96), publishedAt: T0 };
+  const twoB = { ...art('maariv', 96, 'עוד כתבה על אותו סיפור', 1), publishedAt: T0 };
+  const r = s.update([lone, twoA, twoB], T0 + 10 * MIN);
+  assert.deepEqual(new Set(r.single.articles.map(a => a.key)), new Set([twoA.key, twoB.key]));
+  assert.ok(r.single.hot.includes('several-articles'));
+});
+
+test('stories older than an hour are never picked as hot', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ singleSourceFallbackMs: 10 * MIN });
+  assert.equal(s.update([{ ...art('ynet', 97), publishedAt: T0 - 70 * MIN }], T0).single, null);
 });
 
 test('headline: prefers Hebrew, then the shortest among the most representative', () => {

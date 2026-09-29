@@ -2,69 +2,159 @@
   "minSources": 2,
   "similarityThreshold": 0.89,
   "crossLanguageThreshold": 0.84,
+  "eventMergeThreshold": 0.875,
   "scanIntervalMinutes": 3,
   "maxEvents": 10,
+  "singleSourceFallbackMinutes": 10,
   "articleMaxAgeHours": 24,
-
   "port": 3000,
   "userAgent": "IsraelNewsAggregator/1.0 (personal RSS headline aggregator; polls every few minutes)",
   "requestTimeoutMs": 20000,
   "delayBetweenRequestsMs": 1500,
   "embeddingModel": "Xenova/multilingual-e5-small",
-
   "globalFilters": {
     "excludeTitlePatterns": [
-      "תוכן שיווקי", "^בשיתוף", "\\|\\s*בשיתוף", "ממומן", "מקודם", "^עו\"ד ", "^עורכ?ת? דין ",
-      "הורוסקופ", "מזלות", "אסטרולוגי", "חידון", "מתכון",
-      "sponsored", "promoted", "horoscope", "best sites to buy"
+      "תוכן שיווקי",
+      "^בשיתוף",
+      "\\|\\s*בשיתוף",
+      "ממומן",
+      "מקודם",
+      "^עו\"ד ",
+      "^עורכ?ת? דין ",
+      "הורוסקופ",
+      "מזלות",
+      "אסטרולוגי",
+      "חידון",
+      "מתכון",
+      "sponsored",
+      "promoted",
+      "horoscope",
+      "best sites to buy"
     ]
   },
-
   "sources": [
     {
-      "id": "ynet", "name": "ynet", "color": "#e3000f", "enabled": true,
-      "feeds": ["https://www.ynet.co.il/Integration/StoryRss2.xml"],
-      "includeUrlPatterns": ["ynet\\.co\\.il/news/"]
+      "id": "ynet",
+      "name": "ynet",
+      "color": "#e3000f",
+      "enabled": true,
+      "feeds": [
+        "https://www.ynet.co.il/Integration/StoryRss2.xml"
+      ],
+      "includeUrlPatterns": [
+        "ynet\\.co\\.il/news/"
+      ],
+      "breakingFeeds": [
+        "https://www.ynet.co.il/Integration/StoryRss1854.xml"
+      ]
     },
     {
-      "id": "walla", "name": "וואלה", "color": "#1c5fb4", "enabled": true,
-      "feeds": ["https://rss.walla.co.il/feed/1?type=main"],
+      "id": "walla",
+      "name": "וואלה",
+      "color": "#1c5fb4",
+      "enabled": true,
+      "feeds": [
+        "https://rss.walla.co.il/feed/1?type=main"
+      ],
       "dateLabelIsLocalTime": true,
-      "includeUrlPatterns": ["//news\\.walla\\.co\\.il/", "//finance\\.walla\\.co\\.il/"]
+      "includeUrlPatterns": [
+        "//news\\.walla\\.co\\.il/",
+        "//finance\\.walla\\.co\\.il/"
+      ]
     },
     {
-      "id": "israelhayom", "name": "ישראל היום", "color": "#0a3a74", "enabled": true,
-      "feeds": ["https://www.israelhayom.co.il/rss.xml"],
-      "includeUrlPatterns": ["israelhayom\\.co\\.il/news/", "israelhayom\\.co\\.il/business/", "israelhayom\\.co\\.il/tech/tech-news/"]
+      "id": "israelhayom",
+      "name": "ישראל היום",
+      "color": "#0a3a74",
+      "enabled": true,
+      "feeds": [
+        "https://www.israelhayom.co.il/rss.xml"
+      ],
+      "includeUrlPatterns": [
+        "israelhayom\\.co\\.il/news/",
+        "israelhayom\\.co\\.il/business/",
+        "israelhayom\\.co\\.il/tech/tech-news/"
+      ]
     },
     {
-      "id": "maariv", "name": "מעריב", "color": "#f28c00", "enabled": true,
-      "feeds": ["https://www.maariv.co.il/rss/rssfeedsallnews"],
-      "includeUrlPatterns": ["maariv\\.co\\.il/news/", "maariv\\.co\\.il/economy/", "maariv\\.co\\.il/breaking-news/"]
+      "id": "maariv",
+      "name": "מעריב",
+      "color": "#f28c00",
+      "enabled": true,
+      "feeds": [
+        "https://www.maariv.co.il/rss/rssfeedsallnews"
+      ],
+      "includeUrlPatterns": [
+        "maariv\\.co\\.il/news/",
+        "maariv\\.co\\.il/economy/",
+        "maariv\\.co\\.il/breaking-news/"
+      ],
+      "breakingFeeds": [
+        "https://www.maariv.co.il/Rss/RssFeedsMivzakim"
+      ]
     },
     {
-      "id": "haaretz", "name": "הארץ", "color": "#1f1f1f", "enabled": true,
-      "feeds": ["https://www.haaretz.co.il/srv/htz---all-articles"],
-      "includeUrlPatterns": ["haaretz\\.co\\.il/news/"]
+      "id": "haaretz",
+      "name": "הארץ",
+      "color": "#1f1f1f",
+      "enabled": true,
+      "feeds": [
+        "https://www.haaretz.co.il/srv/htz---all-articles"
+      ],
+      "includeUrlPatterns": [
+        "haaretz\\.co\\.il/news/"
+      ]
     },
     {
-      "id": "themarker", "name": "TheMarker", "color": "#00a3a3", "enabled": true,
-      "feeds": ["https://www.themarker.com/srv/tm-all-articles"],
-      "includeUrlPatterns": ["themarker\\.com/(news|markets|wallstreet|realestate|technation|consumer|dynamo|law|economy)/"]
+      "id": "themarker",
+      "name": "TheMarker",
+      "color": "#00a3a3",
+      "enabled": true,
+      "feeds": [
+        "https://www.themarker.com/srv/tm-all-articles"
+      ],
+      "includeUrlPatterns": [
+        "themarker\\.com/(news|markets|wallstreet|realestate|technation|consumer|dynamo|law|economy)/"
+      ]
     },
     {
-      "id": "globes", "name": "גלובס", "color": "#b8860b", "enabled": true,
+      "id": "globes",
+      "name": "גלובס",
+      "color": "#b8860b",
+      "enabled": true,
       "feeds": [
         "https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=9917",
         "https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=585"
       ],
-      "includeUrlPatterns": ["globes\\.co\\.il/news/article\\.aspx"]
+      "includeUrlPatterns": [
+        "globes\\.co\\.il/news/article\\.aspx"
+      ]
     },
     {
-      "id": "jpost", "name": "Jerusalem Post", "color": "#2d6a4f", "enabled": false,
-      "feeds": ["https://www.jpost.com/rss/rssfeedsfrontpage.aspx"],
+      "id": "srugim",
+      "name": "סרוגים",
+      "color": "#7a3db8",
+      "enabled": true,
+      "feeds": [
+        "https://www.srugim.co.il/feed"
+      ]
+    },
+    {
+      "id": "jpost",
+      "name": "Jerusalem Post",
+      "color": "#2d6a4f",
+      "enabled": false,
+      "feeds": [
+        "https://www.jpost.com/rss/rssfeedsfrontpage.aspx"
+      ],
       "dateLabelIsLocalTime": true,
-      "excludeUrlPatterns": ["/opinion/", "/influencers", "/culture", "/health-and-wellness/", "/food-recipes/"]
+      "excludeUrlPatterns": [
+        "/opinion/",
+        "/influencers",
+        "/culture",
+        "/health-and-wellness/",
+        "/food-recipes/"
+      ]
     }
   ]
 }

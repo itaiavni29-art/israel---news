@@ -84,21 +84,26 @@ export class FeedFetcher {
     for (const [i, source] of sources.entries()) {
       const reject = buildFilter(source, this.config.globalFilters);
       const rep = { id: source.id, name: source.name, feeds: [], kept: 0, dropped: {} };
-      for (const url of source.feeds) {
+      // breakingFeeds: the site's own "breaking news" feed — items from it are flagged as breaking.
+      const feeds = [...source.feeds.map(url => ({ url })), ...(source.breakingFeeds ?? []).map(url => ({ url, breaking: true }))];
+      for (const { url, breaking } of feeds) {
         if (articles.length || i || rep.feeds.length) await sleep(this.config.delayBetweenRequestsMs);
         const r = await this.fetchOne(source, url, now);
         rep.feeds.push({ url, status: r.status, error: r.error ?? null, items: r.items.length });
         for (const it of r.items) {
           const why = reject(it) ?? (it.publishedAt == null ? 'bad-date' : now - it.publishedAt > maxAge ? 'too-old' : null);
           if (why) { rep.dropped[why] = (rep.dropped[why] ?? 0) + 1; continue; }
-          articles.push({ ...it, key: articleKey(it.link), sourceId: source.id });
+          articles.push({ ...it, key: articleKey(it.link), sourceId: source.id, ...(breaking && { breaking: true }) });
           rep.kept++;
         }
       }
       report.push(rep);
     }
-    // The same article can appear in two feeds of one source (e.g. Globes) — dedupe by key.
-    const unique = [...new Map(articles.map(a => [a.key, a])).values()];
+    // The same article can appear in two feeds of one source (e.g. Globes) — dedupe by key,
+    // keeping the "breaking" flag if any of its feeds had it.
+    const byKey = new Map();
+    for (const a of articles) byKey.set(a.key, byKey.has(a.key) ? { ...byKey.get(a.key), breaking: byKey.get(a.key).breaking || a.breaking } : a);
+    const unique = [...byKey.values()];
     return { articles: unique, report };
   }
 

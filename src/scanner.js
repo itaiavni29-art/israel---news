@@ -31,6 +31,8 @@ export class Scanner {
       similarityThreshold: config.similarityThreshold,
       crossLanguageThreshold: config.crossLanguageThreshold,
       retentionMs: config.articleMaxAgeHours * 3600_000,
+      singleSourceFallbackMs: (config.singleSourceFallbackMinutes ?? 0) * 60_000,
+      eventMergeThreshold: config.eventMergeThreshold,
     });
     this.pool = new Map(); // key -> article seen in the last articleMaxAgeHours
     this.sourcesById = Object.fromEntries(config.sources.map(s => [s.id, s]));
@@ -79,9 +81,9 @@ export class Scanner {
       const pending = [...this.pool.values()].filter(a => !a.vec);
       if (pending.length) (await this.embedder.embed(pending.map(a => a.title))).forEach((v, i) => { pending[i].vec = v; });
 
-      const { created, updated, retired } = this.store.update([...this.pool.values()], now);
-      this.lastScan = { at: now, durationMs: Date.now() - t0, articles: this.pool.size, created: created.length, updated: updated.length, retired: retired.length, report };
-      log.info(`[scanner] ${this.pool.size} headlines, +${created.length} new events, ${updated.length} updated, ${retired.length} retired (${this.lastScan.durationMs} ms)`);
+      const { created, updated, retired, single } = this.store.update([...this.pool.values()], now);
+      this.lastScan = { at: now, durationMs: Date.now() - t0, articles: this.pool.size, created: created.length, single: single ? 1 : 0, updated: updated.length, retired: retired.length, report };
+      log.info(`[scanner] ${this.pool.size} headlines, +${created.length} new events${single ? `, +1 hot single-source (${single.hot.join(",") || "fresh"}): ${single.articles[0].title.slice(0, 50)}` : ""}, ${updated.length} updated, ${retired.length} retired (${this.lastScan.durationMs} ms)`);
     } catch (e) {
       log.error('[scanner] scan failed:', e.stack ?? e.message);
       this.lastScan = { ...(this.lastScan ?? {}), at: now, error: e.message };

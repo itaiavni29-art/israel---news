@@ -18,13 +18,19 @@ import { cosine } from './embedder.js';
 import { isHebrew, cleanTitle } from './text.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000 }) {
-    Object.assign(this, { maxEvents, minSources, similarityThreshold, retentionMs });
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold }) {
+    Object.assign(this, { maxEvents, minSources, similarityThreshold, retentionMs, singleSourceFallbackMs });
+    // Existing events merge a little more readily than headlines cluster (see mergeDuplicates).
+    this.mergeSlack = Math.max(0, similarityThreshold - (eventMergeThreshold ?? similarityThreshold));
     this.crossLanguageThreshold = crossLanguageThreshold ?? similarityThreshold;
     this.active = [];   // shown events
     this.retired = [];  // evicted events that still absorb their follow-ups
     this.assigned = new Map(); // article key -> event id
+    this.lastMultiAt = 0;  // last time a multi-source event was detected
+    this.lastSingleAt = 0; // last time a single-source ("hot") story was added
   }
+
+  sourceCount(ev) { return new Set(ev.articles.map(a => a.sourceId)).size; }
 
   margin(a, b) {
     const th = a.hebrew === b.hebrew ? this.similarityThreshold : this.crossLanguageThreshold;
@@ -60,22 +66,46 @@ export class EventStore {
         best.articles.push(a);
         best.lastUpdatedAt = now;
         this.assigned.set(a.key, best.id);
-        if (this.active.includes(best)) updated.add(best);
+        if (best.provisional && this.sourceCount(best) >= this.minSources) {
+          // A single-source story was just confirmed by another site: it is now a real event,
+          // detected now (so it moves to the top), even if it had been pushed out of the list.
+          delete best.provisional;
+          best.detectedAt = now;
+          this.lastMultiAt = now;
+          if (!this.active.includes(best)) { this.retired = this.retired.filter(e => e !== best); delete best.retiredAt; this.active.push(best); }
+          created.push(best);
+        } else if (this.active.includes(best)) updated.add(best);
       } else pool.push(a);
     }
 
     // 2–3. Cluster the rest; promote clusters with enough distinct sources.
+    const leftovers = [];
     for (const members of this.cluster(pool)) {
       const sources = new Set(members.map(m => m.sourceId));
-      if (sources.size < this.minSources) continue;
+      if (sources.size < this.minSources) { leftovers.push(members); continue; }
       const ev = { id: randomUUID(), detectedAt: now, lastUpdatedAt: now, articles: members };
       members.forEach(m => this.assigned.set(m.key, ev.id));
       this.active.push(ev);
       created.push(ev);
+      this.lastMultiAt = now;
+    }
+
+    // 3a. Quiet period: no multi-source event for singleSourceFallbackMs → add the "hottest" single-source story.
+    let single = null;
+    if (this.singleSourceFallbackMs > 0 && now - Math.max(this.lastMultiAt, this.lastSingleAt) >= this.singleSourceFallbackMs) {
+      single = this.hottest(leftovers, pool, now);
+      if (single) {
+        const ev = { id: randomUUID(), detectedAt: now, lastUpdatedAt: now, articles: single.members, provisional: true, hot: single.reasons };
+        single.members.forEach(m => this.assigned.set(m.key, ev.id));
+        this.active.push(ev);
+        this.lastSingleAt = now;
+        single = ev;
+      }
     }
 
     // 3b. Merge events that turned out to be the same story (e.g. a new headline bridged two of them).
     for (const merged of this.mergeDuplicates()) { updated.add(merged.into); created.splice(0, created.length, ...created.filter(e => e !== merged.gone)); updated.delete(merged.gone); }
+    for (const ev of this.active) if (ev.provisional && this.sourceCount(ev) >= this.minSources) delete ev.provisional;
 
     // 4. Enforce the cap: retire by oldest detection time (ties → the one whose news is stalest).
     this.active.sort((a, b) => b.detectedAt - a.detectedAt || latest(b) - latest(a));
@@ -88,7 +118,34 @@ export class EventStore {
     }
 
     this.prune(now);
-    return { created: created.filter(e => this.active.includes(e)), updated: [...updated], retired };
+    return { created: created.filter(e => this.active.includes(e)), updated: [...updated], retired, single: single && this.active.includes(single) ? single : null };
+  }
+
+  /**
+   * Pick the single-source story most likely to be big. RSS has no ratings or view counts, so we use
+   * what the feeds do tell us, in this order of weight:
+   *   • the site published several articles on it (it is investing in the story)       +2 per extra article
+   *   • another site has an almost-matching headline (it is spreading)                  +2
+   *   • it came from the site's own breaking-news feed                                 +1
+   *   • freshness (0..1, newer is better)
+   * Only stories published in the last hour qualify.
+   */
+  hottest(clusters, pool, now) {
+    const HOUR = 3600_000;
+    let best = null;
+    for (const members of clusters) {
+      const newest = Math.max(...members.map(m => m.publishedAt ?? 0));
+      if (now - newest > HOUR) continue;
+      const reasons = [];
+      let score = 1 - (now - newest) / HOUR;
+      if (members.length > 1) { score += 2 * (members.length - 1); reasons.push('several-articles'); }
+      const src = members[0].sourceId;
+      const nearMiss = pool.some(o => o.sourceId !== src && members.some(m => this.margin(m, o) >= -0.04));
+      if (nearMiss) { score += 2; reasons.push('near-match-elsewhere'); }
+      if (members.some(m => m.breaking)) { score += 1; reasons.push('breaking'); }
+      if (!best || score > best.score) best = { members, score, reasons };
+    }
+    return best;
   }
 
   /**
@@ -100,13 +157,19 @@ export class EventStore {
   mergeDuplicates() {
     const merges = [];
     for (;;) {
-      let best = null, bestScore = 0;
+      // Two events are one story when their headlines are close on average (within mergeSlack of the
+      // threshold) AND at least one pair of headlines passes the full threshold. The second condition
+      // stops "style twins" — unrelated stories with similar wording — which never reach the threshold.
+      let best = null, bestScore = -Infinity;
       for (let i = 0; i < this.active.length; i++)
         for (let j = i + 1; j < this.active.length; j++) {
-          let s = 0;
-          for (const a of this.active[i].articles) s += this.avgMargin(a, this.active[j].articles);
-          s /= this.active[i].articles.length;
-          if (s >= bestScore) { bestScore = s; best = [this.active[i], this.active[j]]; }
+          let sum = 0, n = 0, strongest = -Infinity;
+          for (const a of this.active[i].articles) for (const b of this.active[j].articles) {
+            const m = this.margin(a, b);
+            sum += m; n++; if (m > strongest) strongest = m;
+          }
+          const avg = sum / n;
+          if (avg >= -this.mergeSlack && strongest >= 0 && avg > bestScore) { bestScore = avg; best = [this.active[i], this.active[j]]; }
         }
       if (!best) return merges;
       const [into, gone] = best[0].detectedAt <= best[1].detectedAt ? best : [best[1], best[0]];
@@ -159,7 +222,8 @@ export class EventStore {
     const gone = new Set(sourceIds);
     const clean = list => list.filter(ev => {
       ev.articles = ev.articles.filter(a => !gone.has(a.sourceId));
-      return new Set(ev.articles.map(a => a.sourceId)).size >= this.minSources;
+      const n = this.sourceCount(ev);
+      return n >= this.minSources || (ev.provisional && n >= 1);
     });
     this.active = clean(this.active);
     this.retired = clean(this.retired);
@@ -171,7 +235,7 @@ export class EventStore {
 
   toJSON() {
     const ser = ev => ({ ...ev, articles: ev.articles.map(a => ({ ...a, vec: Array.from(a.vec, x => +x.toFixed(5)) })) });
-    return { active: this.active.map(ser), retired: this.retired.map(ser) };
+    return { active: this.active.map(ser), retired: this.retired.map(ser), lastMultiAt: this.lastMultiAt, lastSingleAt: this.lastSingleAt };
   }
 
   load(json) {
@@ -180,6 +244,9 @@ export class EventStore {
     this.retired = (json.retired ?? []).map(de);
     this.assigned = new Map();
     for (const ev of [...this.active, ...this.retired]) for (const a of ev.articles) this.assigned.set(a.key, ev.id);
+    // State saved before these fields existed: derive from the newest multi-source detection.
+    this.lastMultiAt = json.lastMultiAt ?? Math.max(0, ...[...this.active, ...this.retired].filter(e => !e.provisional).map(e => e.detectedAt));
+    this.lastSingleAt = json.lastSingleAt ?? 0;
   }
 }
 
@@ -211,6 +278,8 @@ export function presentEvent(ev, sourcesById) {
     lastUpdatedAt: ev.lastUpdatedAt,
     title: head.title,
     sourceCount: bySource.size,
+    singleSource: !!ev.provisional, // not (yet) confirmed by a second site — shown as a "hot" story
+    hot: ev.provisional ? ev.hot ?? [] : undefined,
     sources: [...bySource.keys()].map(id => ({ id, name: sourcesById[id]?.name ?? id, color: sourcesById[id]?.color ?? '#666' })),
     articles: [...ev.articles]
       .sort((x, y) => (x.publishedAt ?? 0) - (y.publishedAt ?? 0))

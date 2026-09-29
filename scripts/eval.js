@@ -69,14 +69,14 @@ for (const fold of [0, 1]) {
 console.log(`\n2) Out-of-sample (2-fold CV): accuracy ${pct(cvCorrect / pairs.length)} (thresholds chosen per fold: ${chosen.join(', ')})`);
 
 // 3. End-to-end clustering of the full snapshot.
-const store = new EventStore({ maxEvents: 1000, minSources: 1, similarityThreshold: TH, crossLanguageThreshold: CROSS });
+const store = new EventStore({ maxEvents: 1000, minSources: 1, similarityThreshold: TH, crossLanguageThreshold: CROSS, eventMergeThreshold: config.eventMergeThreshold });
 const now = Date.now();
 store.update(snapshot.map((a, i) => ({ ...a, key: String(i), publishedAt: Date.parse(a.publishedAt), vec: vecs.get(a.title) })), now);
 const clusterOf = new Map();
 for (const ev of store.active) for (const a of ev.articles) clusterOf.set(a.title, ev.id);
 let togetherPairs = 0, apartNeg = 0, intact = 0;
 for (const p of same) if (clusterOf.get(p.a) === clusterOf.get(p.b)) togetherPairs++;
-for (const p of diff) if (clusterOf.get(p.a) !== clusterOf.get(p.b)) apartNeg++;
+for (const p of diff) if (clusterOf.get(p.a) !== clusterOf.get(p.b)) apartNeg++; else if (process.env.VERBOSE) console.log(`   merged different events: ${p.a.slice(0, 45)} || ${p.b.slice(0, 45)}`);
 for (const g of data.groups) if (new Set(g.articles.map(a => clusterOf.get(a.title))).size === 1) intact++;
 const multi = store.active.filter(ev => new Set(ev.articles.map(a => a.sourceId)).size >= config.minSources);
 console.log(`\n3) End-to-end clustering of all ${snapshot.length} headlines`);

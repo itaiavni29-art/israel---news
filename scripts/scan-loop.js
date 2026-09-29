@@ -31,6 +31,15 @@ function publish() {
   } catch (e) { log.error('[publish] failed:', String(e.stderr ?? e.message).replace(token, '***')); }
 }
 
+// New code pushed to main? Stop, so the next job (started by the workflow) runs the new version.
+function codeChanged() {
+  if (!repo || !process.env.GITHUB_SHA) return false;
+  try {
+    const head = execFileSync('git', ['ls-remote', `https://github.com/${repo}.git`, 'refs/heads/main'], { stdio: 'pipe' }).toString().split('\t')[0];
+    return !!head && head !== process.env.GITHUB_SHA;
+  } catch { return false; }
+}
+
 const deadline = Date.now() + loopMinutes * 60_000;
 const intervalMs = config.scanIntervalMinutes * 60_000;
 log.info(`[loop] scanning every ${config.scanIntervalMinutes} min for ${loopMinutes} min`);
@@ -38,6 +47,7 @@ while (Date.now() < deadline) {
   const started = Date.now();
   await scanner.scanOnce();
   publish();
+  if (codeChanged()) { log.info('[loop] new code on main — handing over to a fresh job'); break; }
   const wait = Math.max(0, intervalMs - (Date.now() - started));
   if (Date.now() + wait >= deadline) break;
   await new Promise(r => setTimeout(r, wait));

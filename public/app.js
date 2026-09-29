@@ -64,6 +64,12 @@ function ago(ms) {
   return `לפני ${h} שעות`;
 }
 const sourcesText = n => (n === 1 ? 'מקור אחד' : `${n} מקורות`);
+// A multi-source event says how many sites covered it; a "hot" single-source story says so plainly.
+const HOT_REASON = { 'several-articles': 'האתר פרסם כמה כתבות על זה', 'near-match-elsewhere': 'כותרת דומה מופיעה באתר נוסף', breaking: 'מבזק' };
+const coverage = ev => ev.singleSource
+  ? el('p', { class: 'coverage single' }, 'מקור אחד בלבד · עדיין לא סוקר באתר נוסף',
+      ev.hot?.length ? el('span', { class: 'hot-why' }, ` (${ev.hot.map(r => HOT_REASON[r] ?? r).join(', ')})`) : null)
+  : el('p', { class: 'coverage' }, `סוקר ב-${sourcesText(ev.sourceCount)}`);
 const dot = color => el('span', { class: 'dot', style: `background:${color}`, 'aria-hidden': 'true' });
 
 // ---------- data ----------
@@ -103,10 +109,11 @@ function homeView() {
       return el('li', { class: 'card' },
         el('div', { class: 'card-meta' },
           isNew && el('span', { class: 'badge-new' }, 'חדש'),
+          ev.singleSource && el('span', { class: 'badge-hot' }, 'חם'),
           el('time', { datetime: new Date(ev.detectedAt).toISOString(), title: `זוהה בשעה ${hhmm(ev.detectedAt)}` },
             `זוהה ${ago(ev.detectedAt)} · ${hhmm(ev.detectedAt)}`)),
         el('h2', { lang: langOf(ev.title) }, el('a', { href }, ev.title)),
-        el('p', { class: 'coverage' }, `סוקר ב-${sourcesText(ev.sourceCount)}`),
+        coverage(ev),
         el('ul', { class: 'chips', 'aria-label': 'מקורות' }, ev.sources.map(s => el('li', { class: 'chip' }, dot(s.color), s.name))),
         el('a', { class: 'btn', href, 'aria-label': `לקריאת המקורות: ${ev.title}` }, 'לקריאת המקורות'));
     }));
@@ -151,7 +158,7 @@ function eventView(id, tab) {
     el('article', { class: 'event-head' },
       el('div', { class: 'card-meta' }, el('time', { datetime: new Date(ev.detectedAt).toISOString() }, `זוהה ${ago(ev.detectedAt)} · ${hhmm(ev.detectedAt)}`)),
       el('h2', { lang: langOf(ev.title) }, ev.title),
-      el('p', { class: 'coverage' }, `סוקר ב-${sourcesText(ev.sourceCount)}`),
+      coverage(ev),
       el('ul', { class: 'chips', 'aria-label': 'מקורות' }, ev.sources.map(s => el('li', { class: 'chip' }, dot(s.color), s.name)))),
     el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'תצוגת אירוע' }, tabBtn('what', 'מה קרה?'), tabBtn('sources', `מקורות (${ev.sourceCount})`)),
     current === 'what' ? whatHappened : sources);
