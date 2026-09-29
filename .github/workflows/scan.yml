@@ -1,15 +1,22 @@
-# Runs one news scan every ~5 minutes (GitHub's minimum; under load runs can be delayed).
-# State between runs (events, ETags) and the published events.json live in the `data` branch,
-# which is replaced by a single fresh commit on every run so the history does not grow.
+# One long-running job that scans every 3 minutes for ~5.5 hours, publishing after every scan.
+# GitHub's own cron is unreliable (runs are often skipped or delayed by hours), so:
+#   • the job starts its successor when it ends (workflow_dispatch via the built-in token), and
+#   • an hourly cron and any push to this file act as backups. `concurrency` keeps only one job
+#     running and at most one waiting, so nothing overlaps.
+# State between jobs (events, ETags) and the published events.json live in the `data` branch.
 name: סריקת חדשות
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '17 * * * *'
+  push:
+    branches: [main]
+    paths: ['.github/workflows/scan.yml', 'scripts/scan-loop.js', 'src/**', 'config.json']
   workflow_dispatch: {}
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: news-scan
@@ -18,7 +25,7 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -45,18 +52,13 @@ jobs:
             echo "No data branch yet — first run starts fresh."
           fi
 
-      - name: Scan
-        run: node scripts/scan-once.js data
+      - name: Scan every few minutes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/scan-loop.js data 330
 
-      - name: Publish to the data branch
+      - name: Start the next job
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd data
-          [ -f events.json ] || { echo "nothing to publish"; exit 0; }
-          git init -q -b data
-          git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -qm "scan $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data:data
+        run: gh workflow run scan.yml --ref "${GITHUB_REF_NAME}"
