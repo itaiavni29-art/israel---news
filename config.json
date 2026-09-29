@@ -3,7 +3,7 @@
   "similarityThreshold": 0.89,
   "crossLanguageThreshold": 0.84,
   "eventMergeThreshold": 0.875,
-  "scanIntervalMinutes": 3,
+  "scanIntervalMinutes": 10,
   "maxEvents": 10,
   "singleSourceFallbackMinutes": 10,
   "articleMaxAgeHours": 24,

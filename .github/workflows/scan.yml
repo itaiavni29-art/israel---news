@@ -1,4 +1,4 @@
-# One long-running job that scans every 3 minutes for ~5.5 hours, publishing after every scan.
+# One long-running job that scans every scanIntervalMinutes (config.json) for ~5.5 hours, publishing after every scan.
 # GitHub's own cron is unreliable (runs are often skipped or delayed by hours), so:
 #   • the job starts its successor when it ends (workflow_dispatch via the built-in token), and
 #   • an hourly cron and any push to this file act as backups. `concurrency` keeps only one job
