@@ -5,25 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>חדשות ישראל</title>
   <meta name="description" content="החדשות שמסוקרות עכשיו במספר מקורות">
-  <meta name="theme-color" content="#0038b8">
+  <meta name="theme-color" content="#f5f2eb">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <a href="#/" class="brand"><h1>חדשות ישראל <span class="flag" aria-hidden="true">🇮🇱</span></h1></a>
-      <p class="subtitle">החדשות שמסוקרות עכשיו במספר מקורות</p>
-      <p class="scan-status" id="scan-status" aria-live="polite"></p>
-    </div>
-  </header>
+  <div class="shell">
+    <div id="app"></div>
+  </div>
 
-  <main class="wrap" id="app" tabindex="-1"></main>
-
-  <footer class="wrap site-footer">
-    <p>האתר לא מעתיק כתבות. הוא מציג רק כותרות וקישורים, ומפנה לאתרים המקוריים.</p>
-    <p><a href="#/status">מצב המקורות</a></p>
-  </footer>
+  <nav class="bottom-nav" aria-label="ניווט ראשי">
+    <a class="nav-item" href="#/" data-nav="home"><span class="pill"><span class="icon i-house" aria-hidden="true"></span></span>בית</a>
+    <a class="nav-item" href="#/live" data-nav="live"><span class="pill"><span class="icon i-radio" aria-hidden="true"></span></span>מבזקים</a>
+    <a class="nav-item" href="#/topics" data-nav="topics"><span class="pill"><span class="icon i-grid" aria-hidden="true"></span></span>נושאים</a>
+    <a class="nav-item" href="#/saved" data-nav="saved"><span class="pill"><span class="icon i-bookmark" aria-hidden="true"></span></span>שמורים</a>
+  </nav>
 
   <script src="app.js" type="module"></script>
 </body>

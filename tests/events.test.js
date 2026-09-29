@@ -172,5 +172,5 @@ test('headline: prefers Hebrew, then the shortest among the most representative'
   assert.equal(pickHeadline(ev).title, 'נתניהו נפגש עם טראמפ בבית הלבן');
   const view = presentEvent({ id: 'x', detectedAt: 1, lastUpdatedAt: 1, ...ev }, { ynet: { name: 'ynet', color: '#f00' } });
   assert.equal(view.sourceCount, 3);
-  assert.ok(view.articles.every(a => Object.keys(a).every(k => ['sourceId', 'sourceName', 'color', 'title', 'link', 'publishedAt'].includes(k))));
+  assert.ok(view.articles.every(a => Object.keys(a).every(k => ['sourceId', 'sourceName', 'color', 'title', 'link', 'publishedAt', 'category'].includes(k))));
 });

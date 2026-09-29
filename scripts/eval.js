@@ -69,7 +69,7 @@ for (const fold of [0, 1]) {
 console.log(`\n2) Out-of-sample (2-fold CV): accuracy ${pct(cvCorrect / pairs.length)} (thresholds chosen per fold: ${chosen.join(', ')})`);
 
 // 3. End-to-end clustering of the full snapshot.
-const store = new EventStore({ maxEvents: 1000, minSources: 1, similarityThreshold: TH, crossLanguageThreshold: CROSS, eventMergeThreshold: config.eventMergeThreshold });
+const store = new EventStore({ maxEvents: 1000, minSources: 1, similarityThreshold: TH, crossLanguageThreshold: CROSS, eventMergeThreshold: config.eventMergeThreshold, noSharedNamePenalty: +(process.env.PENALTY ?? config.noSharedNamePenalty ?? 0) });
 const now = Date.now();
 store.update(snapshot.map((a, i) => ({ ...a, key: String(i), publishedAt: Date.parse(a.publishedAt), vec: vecs.get(a.title) })), now);
 const clusterOf = new Map();

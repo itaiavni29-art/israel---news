@@ -82,3 +82,16 @@ test('config: defaults and validation', () => {
   assert.ok(config.scanIntervalMinutes >= 1);
   assert.equal(config.maxEvents, 10);
 });
+
+test('lexical guard: shared names count, shared common words do not', async () => {
+  const { LexicalIndex } = await import('../src/lexical.js');
+  const pool = [
+    'ישר מסמנת את שוק השכירות: נגדיל את היצע הההשכרה לטווח ארוך',
+    'על רקע עסקת אלטשולר שחם: רשות שוק ההון באזהרה חריפה לסוכני ביטוח',
+    'רשות שוק ההון מזהירה את אלטשולר שחם',
+    ...Array.from({ length: 60 }, (_, i) => `כותרת כללית מספר ${i} על שוק המניות והכלכלה`),
+  ];
+  const lex = new LexicalIndex(pool);
+  assert.equal(lex.sharesRareWord(pool[0], pool[1]), false); // only "שוק" in common — the real false merge
+  assert.equal(lex.sharesRareWord(pool[1], pool[2]), true);  // "אלטשולר" — same story
+});

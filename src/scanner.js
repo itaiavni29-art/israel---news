@@ -12,6 +12,7 @@ import { FeedFetcher } from './feeds.js';
 import { Embedder } from './embedder.js';
 import { EventStore, presentEvent } from './events.js';
 import { isHebrew } from './text.js';
+import { Categorizer, CATEGORIES, categoryInfo, eventCategory } from './categories.js';
 import { log } from './log.js';
 
 export class Scanner {
@@ -25,6 +26,7 @@ export class Scanner {
     this.publishDir = publishDir;
     this.fetcher = new FeedFetcher(config, log);
     this.embedder = new Embedder(config.embeddingModel);
+    this.categorizer = new Categorizer(this.embedder);
     this.store = new EventStore({
       maxEvents: config.maxEvents,
       minSources: config.minSources,
@@ -33,6 +35,7 @@ export class Scanner {
       retentionMs: config.articleMaxAgeHours * 3600_000,
       singleSourceFallbackMs: (config.singleSourceFallbackMinutes ?? 0) * 60_000,
       eventMergeThreshold: config.eventMergeThreshold,
+      noSharedNamePenalty: config.noSharedNamePenalty,
     });
     this.pool = new Map(); // key -> article seen in the last articleMaxAgeHours
     this.sourcesById = Object.fromEntries(config.sources.map(s => [s.id, s]));
@@ -80,6 +83,10 @@ export class Scanner {
 
       const pending = [...this.pool.values()].filter(a => !a.vec);
       if (pending.length) (await this.embedder.embed(pending.map(a => a.title))).forEach((v, i) => { pending[i].vec = v; });
+      await this.categorizer.init();
+      for (const a of pending) a.category = this.categorizer.categorize(a);
+      // Events saved before categories existed: label their articles once.
+      for (const ev of [...this.store.active, ...this.store.retired]) for (const a of ev.articles) if (a.category === undefined) a.category = this.categorizer.categorize(a);
 
       const { created, updated, retired, single } = this.store.update([...this.pool.values()], now);
       this.lastScan = { at: now, durationMs: Date.now() - t0, articles: this.pool.size, created: created.length, single: single ? 1 : 0, updated: updated.length, retired: retired.length, report };
@@ -107,11 +114,20 @@ export class Scanner {
   stop() { clearTimeout(this.timer); }
 
   eventsPayload() {
+    const src = id => this.sourcesById[id] ?? { name: id, color: '#666' };
+    // Headline + link only (never article text) — for the live-updates timeline, search and topics.
+    const item = a => ({ sourceId: a.sourceId, sourceName: src(a.sourceId).name, color: src(a.sourceId).color,
+      title: a.title, link: a.link, publishedAt: a.publishedAt, category: categoryInfo(a.category) });
+    const pool = [...this.pool.values()].sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
     return {
       generatedAt: Date.now(),
       lastScanAt: this.lastScan?.at ?? null,
       minSources: this.config.minSources,
-      events: this.store.active.map(ev => presentEvent(ev, this.sourcesById)),
+      sources: this.config.sources.filter(s => s.enabled !== false).map(s => ({ id: s.id, name: s.name, color: s.color })),
+      categories: CATEGORIES.map(({ id, name, color }) => ({ id, name, color })),
+      events: this.store.active.map(ev => ({ ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) })),
+      breaking: pool.filter(a => a.breaking).slice(0, 40).map(item),
+      headlines: pool.slice(0, 400).map(item),
     };
   }
 

@@ -16,9 +16,13 @@
 import { randomUUID } from 'node:crypto';
 import { cosine } from './embedder.js';
 import { isHebrew, cleanTitle } from './text.js';
+import { LexicalIndex } from './lexical.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold }) {
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0 }) {
+    // Hebrew pairs that share no rare word (name, company, place) must be this much more similar.
+    this.noSharedNamePenalty = noSharedNamePenalty;
+    this.lex = null;
     Object.assign(this, { maxEvents, minSources, similarityThreshold, retentionMs, singleSourceFallbackMs });
     // Existing events merge a little more readily than headlines cluster (see mergeDuplicates).
     this.mergeSlack = Math.max(0, similarityThreshold - (eventMergeThreshold ?? similarityThreshold));
@@ -33,7 +37,8 @@ export class EventStore {
   sourceCount(ev) { return new Set(ev.articles.map(a => a.sourceId)).size; }
 
   margin(a, b) {
-    const th = a.hebrew === b.hebrew ? this.similarityThreshold : this.crossLanguageThreshold;
+    let th = a.hebrew === b.hebrew ? this.similarityThreshold : this.crossLanguageThreshold;
+    if (this.noSharedNamePenalty && this.lex && a.hebrew && b.hebrew && !this.lex.sharesRareWord(a.title, b.title)) th += this.noSharedNamePenalty;
     return cosine(a.vec, b.vec) - th;
   }
 
@@ -50,6 +55,7 @@ export class EventStore {
    */
   update(articles, now = Date.now()) {
     const created = [], updated = new Set(), retired = [];
+    if (this.noSharedNamePenalty) this.lex = new LexicalIndex([...articles, ...this.active, ...this.retired].flatMap(x => x.articles ? x.articles.map(a => a.title) : [x.title]));
     const fresh = articles
       .filter(a => !this.assigned.has(a.key))
       .map(a => ({ ...a, hebrew: a.hebrew ?? isHebrew(a.title), firstSeenAt: a.firstSeenAt ?? now }));
@@ -283,7 +289,7 @@ export function presentEvent(ev, sourcesById) {
     sources: [...bySource.keys()].map(id => ({ id, name: sourcesById[id]?.name ?? id, color: sourcesById[id]?.color ?? '#666' })),
     articles: [...ev.articles]
       .sort((x, y) => (x.publishedAt ?? 0) - (y.publishedAt ?? 0))
-      .map(a => ({ sourceId: a.sourceId, sourceName: sourcesById[a.sourceId]?.name ?? a.sourceId,
+      .map(a => ({ sourceId: a.sourceId, sourceName: sourcesById[a.sourceId]?.name ?? a.sourceId, category: a.category ?? null,
         color: sourcesById[a.sourceId]?.color ?? '#666', title: a.title, link: a.link, publishedAt: a.publishedAt })),
   };
 }
