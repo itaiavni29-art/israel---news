@@ -61,4 +61,4 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run scan.yml --ref "${GITHUB_REF_NAME}"
+        run: gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
