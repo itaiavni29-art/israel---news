@@ -456,8 +456,9 @@ function setNav(key) {
 }
 
 async function route({ refresh = true } = {}) {
-  const hash = location.hash || '#/';
   if (refresh) await load();
+  // Read the address only after loading: the reader may have tapped elsewhere while data was loading.
+  const hash = location.hash || '#/';
   let view, nav = 'home', m;
   if ((m = hash.match(/^#\/event\/([\w-]+)(\/sources)?$/))) view = eventView(m[1], m[2] ? 'sources' : 'what');
   else if (hash === '#/live') { view = liveView(); nav = 'live'; }
@@ -500,6 +501,20 @@ async function checkAppVersion() {
     if (appVersion && v && v !== appVersion) location.reload();
     appVersion ??= v;
   } catch { /* offline */ }
+}
+
+// ---------- fixed app scale ----------
+// The app keeps one size no matter what: iOS Safari ignores user-scalable=no, so pinch gestures and
+// desktop Ctrl+wheel / Ctrl +/- are blocked here as well. (Double-tap zoom is off via CSS touch-action,
+// which — unlike a JS double-tap filter — never swallows a real tap.)
+{
+  const block = e => e.preventDefault();
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(type, block, { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+  document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && ['+', '=', '-', '_', '0'].includes(e.key)) e.preventDefault();
+  });
 }
 
 // Pull new events automatically: every 30 s, and right away when the page comes back into view
