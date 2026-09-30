@@ -30,6 +30,7 @@ function fakeApi(script, calls = []) {
       { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] },
       { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] },
       { name: 'models/gemma-4-31b-it', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-3.8-flash-lite-tts', supportedGenerationMethods: ['generateContent'] }, // speech model: never picked
       { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
     ] });
     const model = url.match(/models\/([^:]+):generateContent/)[1];

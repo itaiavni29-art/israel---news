@@ -16,7 +16,8 @@ const DAY_TZ = 'America/Los_Angeles';
 // Limits are kept a bit under the free tier shown in AI Studio for the project.
 const CANDIDATES = [
   { pattern: /^models\/gemini-(\d+(?:\.\d+)?)-flash-lite$/, perDay: 450, perMinute: 12 },          // 500/day, 15/min
-  { pattern: /^models\/gemini-(\d+(?:\.\d+)?)-flash-lite(-[\w-]+)?$/, perDay: 450, perMinute: 12 },
+  // dated / preview variants of flash-lite — but never speech, image, audio or live models
+  { pattern: /^models\/gemini-(\d+(?:\.\d+)?)-flash-lite-(?!.*(?:tts|image|audio|live|transcribe))[\w.-]+$/, perDay: 450, perMinute: 12 },
   { pattern: /^models\/gemma-4-31b(-it)?$/, perDay: 13000, perMinute: 8, noSystem: true },         // 14.4K/day, 16K tokens/min
 ];
 
@@ -92,7 +93,8 @@ export class Summarizer {
     for (const c of CANDIDATES) {
       const matches = names.filter(n => c.pattern.test(n) && !picked.some(p => p.name === n))
         .sort((a, b) => parseFloat(b.match(c.pattern)?.[1] ?? 0) - parseFloat(a.match(c.pattern)?.[1] ?? 0));
-      if (matches[0]) picked.push({ name: matches[0], perDay: c.perDay, perMinute: c.perMinute, noSystem: !!c.noSystem });
+      // the two newest versions: each has its own free daily quota, so the older one is a real fallback
+      for (const name of matches.slice(0, 2)) picked.push({ name, perDay: c.perDay, perMinute: c.perMinute, noSystem: !!c.noSystem });
     }
     this.models = picked;
     this.log.info?.(`[summarizer] models: ${picked.map(m => m.name).join(' → ') || 'none available'}`);
