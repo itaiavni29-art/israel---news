@@ -288,3 +288,22 @@ h1, h2, h3, p { margin: 0; }
 .toast { position: fixed; z-index: 50; bottom: calc(var(--nav-h) + 16px); left: 50%; transform: translateX(-50%); background: var(--night); color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 
 @media (max-width: 360px) { :root { --gutter: 16px; } .brand-name { font-size: 22px; } .tile { width: 92px; } }
+
+/* ---------- Photos from the source sites (loaded from their servers, as published in their feeds) ---------- */
+.lead, .hero { position: relative; overflow: hidden; }
+.bg-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.lead[data-has-photo], .hero[data-has-photo] { background: var(--night); }
+/* Figma "Image overlay": clear at the top, dark navy at the bottom, so the headline stays readable. */
+.lead[data-has-photo]::before, .hero[data-has-photo]::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; opacity: 1; -webkit-mask: none; mask: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 15%, rgba(8, 19, 29, .85) 100%);
+}
+.hero[data-has-photo]::before { background: linear-gradient(176deg, rgba(0, 0, 0, .06) 9%, rgba(14, 23, 33, .85) 95%); }
+.lead > :not(.bg-photo), .hero > :not(.bg-photo) { position: relative; z-index: 2; }
+.credit { position: absolute !important; z-index: 2; top: 10px; left: 12px; font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, .9); background: rgba(8, 19, 29, .55); padding: 2px 6px; border-radius: 4px; }
+.thumb { position: relative; flex: none; width: 112px; height: 84px; border-radius: var(--radius-md); overflow: hidden; background: var(--brand-soft); }
+.thumb.tall { height: 92px; }
+.thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-badge { position: absolute; top: 6px; left: 6px; padding: 2px 6px; border-radius: 999px; background: rgba(17, 26, 34, .79); color: #fff; font-size: 10px; font-weight: 700; }
+.thumb-badge.hot { background: var(--amber); }
+@media (max-width: 360px) { .thumb { width: 92px; } }

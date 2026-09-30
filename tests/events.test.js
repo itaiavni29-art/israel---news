@@ -174,3 +174,23 @@ test('headline: prefers Hebrew, then the shortest among the most representative'
   assert.equal(view.sourceCount, 3);
   assert.ok(view.articles.every(a => Object.keys(a).every(k => ['sourceId', 'sourceName', 'color', 'title', 'link', 'publishedAt', 'category'].includes(k))));
 });
+
+test('story keyword: two angles of one story (shared "פליי דובאי") merge; unrelated look-alikes do not', () => {
+  const unit = (x, y) => { const v = new Float32Array(64); v[0] = x; v[1] = y; const n = Math.hypot(x, y); return v.map(z => z / n); };
+  const mk = (src, title, vec) => ({ key: `s${k++}`, sourceId: src, title, link: `https://e/${k}`, publishedAt: Date.now(), hebrew: true, vec });
+  const s = new EventStore({ maxEvents: 10, minSources: 2, similarityThreshold: 0.89, storyMergeThreshold: 0.865 });
+  const a = unit(1, 0), b = unit(0.885, 0.4656); // cos ≈ 0.885: below 0.89, above 0.865
+  const filler = Array.from({ length: 40 }, (_, i) => mk('x', `כותרת אחרת לגמרי מספר ${i}`, unit(0, 1)));
+  const stocks = [mk('themarker', 'מניות אל על מזנקות אחרי הדרמה בטיסת פליי דובאי', a), mk('globes', 'מניות התעופה קופצות אחרי הדרמה בפליי דובאי', a)];
+  const flight = [mk('ynet', 'תיעודים מטיסת פליי דובאי: נוסעים עם חולצות ספוגות בדם', b), mk('israelhayom', 'נוסעת בטיסת פליי דובאי: יש פה אנשים פצועים', b)];
+  s.update([...filler, ...stocks], 1000);
+  s.update([...filler, ...stocks, ...flight], 2000);
+  assert.equal(s.active.filter(e => e.articles.some(x => /פליי/.test(x.title))).length, 1);
+
+  const t = new EventStore({ maxEvents: 10, minSources: 2, similarityThreshold: 0.89, storyMergeThreshold: 0.865 });
+  const sms = [mk('ynet', 'הודעת ה-SMS שעלולה לרוקן את החשבון', a), mk('maariv', 'אזהרה: הודעת SMS שמרוקנת חשבונות', a)];
+  const mortgage = [mk('globes', 'הטעות במשכנתא שעלולה לעלות ביוקר', b), mk('themarker', 'מחזור משכנתא: הטעות היקרה', b)];
+  t.update([...filler, ...sms], 1000);
+  t.update([...filler, ...sms, ...mortgage], 2000);
+  assert.equal(t.active.length, 2); // no shared story keyword → stay apart
+});

@@ -19,7 +19,9 @@ import { isHebrew, cleanTitle } from './text.js';
 import { LexicalIndex } from './lexical.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0 }) {
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0 }) {
+    // Events that share a story keyword ("פליי דובאי") merge at this lower average similarity. 0 = off.
+    this.storyMergeThreshold = storyMergeThreshold;
     // Hebrew pairs that share no rare word (name, company, place) must be this much more similar.
     this.noSharedNamePenalty = noSharedNamePenalty;
     this.lex = null;
@@ -55,7 +57,7 @@ export class EventStore {
    */
   update(articles, now = Date.now()) {
     const created = [], updated = new Set(), retired = [];
-    if (this.noSharedNamePenalty) this.lex = new LexicalIndex([...articles, ...this.active, ...this.retired].flatMap(x => x.articles ? x.articles.map(a => a.title) : [x.title]));
+    if (this.noSharedNamePenalty || this.storyMergeThreshold) this.lex = new LexicalIndex([...articles, ...this.active, ...this.retired].flatMap(x => x.articles ? x.articles.map(a => a.title) : [x.title]));
     const fresh = articles
       .filter(a => !this.assigned.has(a.key))
       .map(a => ({ ...a, hebrew: a.hebrew ?? isHebrew(a.title), firstSeenAt: a.firstSeenAt ?? now }));
@@ -175,7 +177,8 @@ export class EventStore {
             sum += m; n++; if (m > strongest) strongest = m;
           }
           const avg = sum / n;
-          if (avg >= -this.mergeSlack && strongest >= 0 && avg > bestScore) { bestScore = avg; best = [this.active[i], this.active[j]]; }
+          const sameStory = avg >= -this.mergeSlack && strongest >= 0;
+          if ((sameStory || this.sharesStory(this.active[i], this.active[j])) && avg > bestScore) { bestScore = avg; best = [this.active[i], this.active[j]]; }
         }
       if (!best) return merges;
       const [into, gone] = best[0].detectedAt <= best[1].detectedAt ? best : [best[1], best[0]];
@@ -185,6 +188,16 @@ export class EventStore {
       this.active = this.active.filter(e => e !== gone);
       merges.push({ into, gone });
     }
+  }
+
+  /** Different angles of one story: a shared story keyword and a high average similarity. */
+  sharesStory(a, b) {
+    if (!this.storyMergeThreshold || !this.lex) return false;
+    let sum = 0, n = 0;
+    for (const x of a.articles) for (const y of b.articles) { sum += cosine(x.vec, y.vec); n++; }
+    if (sum / n < this.storyMergeThreshold) return false;
+    const kb = this.lex.keywords(b.articles.map(x => x.title));
+    return [...this.lex.keywords(a.articles.map(x => x.title))].some(k => kb.has(k));
   }
 
   // Average-linkage agglomerative clustering on margins.
@@ -278,11 +291,15 @@ export function presentEvent(ev, sourcesById) {
   for (const a of [...ev.articles].sort((x, y) => (x.publishedAt ?? 0) - (y.publishedAt ?? 0)))
     if (!bySource.has(a.sourceId)) bySource.set(a.sourceId, a); // earliest article per source
   const head = pickHeadline(ev);
+  // One photo per event, as published in a source's own feed: the headline article's photo if it has
+  // one, otherwise the earliest article that does. Only the URL is used (the image is never copied).
+  const pic = head.image ? head : [...ev.articles].sort((x, y) => (x.publishedAt ?? 0) - (y.publishedAt ?? 0)).find(a => a.image);
   return {
     id: ev.id,
     detectedAt: ev.detectedAt,
     lastUpdatedAt: ev.lastUpdatedAt,
     title: head.title,
+    image: pic ? { url: pic.image, sourceName: sourcesById[pic.sourceId]?.name ?? pic.sourceId, link: pic.link } : null,
     sourceCount: bySource.size,
     singleSource: !!ev.provisional, // not (yet) confirmed by a second site — shown as a "hot" story
     hot: ev.provisional ? ev.hot ?? [] : undefined,

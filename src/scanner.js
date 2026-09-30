@@ -36,6 +36,7 @@ export class Scanner {
       singleSourceFallbackMs: (config.singleSourceFallbackMinutes ?? 0) * 60_000,
       eventMergeThreshold: config.eventMergeThreshold,
       noSharedNamePenalty: config.noSharedNamePenalty,
+      storyMergeThreshold: config.storyMergeThreshold,
     });
     this.pool = new Map(); // key -> article seen in the last articleMaxAgeHours
     this.sourcesById = Object.fromEntries(config.sources.map(s => [s.id, s]));
@@ -119,6 +120,8 @@ export class Scanner {
     const item = a => ({ sourceId: a.sourceId, sourceName: src(a.sourceId).name, color: src(a.sourceId).color,
       title: a.title, link: a.link, publishedAt: a.publishedAt, category: categoryInfo(a.category) });
     const pool = [...this.pool.values()].sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
+    // Events saved before images were read from the feeds: take the photo from the current feed item.
+    for (const ev of this.store.active) for (const a of ev.articles) if (!a.image && this.pool.get(a.key)?.image) a.image = this.pool.get(a.key).image;
     return {
       generatedAt: Date.now(),
       lastScanAt: this.lastScan?.at ?? null,

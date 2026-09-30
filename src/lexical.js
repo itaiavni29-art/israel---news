@@ -33,7 +33,8 @@ export class LexicalIndex {
     this.df = new Map();
     this.cache = new Map();
     for (const t of new Set(titles)) for (const f of this.forms(t)) this.df.set(f, (this.df.get(f) ?? 0) + 1);
-    this.maxDf = Math.max(2, Math.ceil(new Set(titles).size * rareShare));
+    this.size = new Set(titles).size;
+    this.maxDf = Math.max(2, Math.ceil(this.size * rareShare));
   }
 
   forms(title) {
@@ -46,5 +47,16 @@ export class LexicalIndex {
     const A = this.forms(a), B = this.forms(b);
     for (const f of A) if (B.has(f) && (this.df.get(f) ?? 0) <= this.maxDf) return true;
     return false;
+  }
+
+  /**
+   * Story keywords of an event: words in at least two and at least half of its headlines that are specific to a few
+   * stories (in at most `maxShare` of the pool's headlines) — e.g. "פליי דובאי" for a flight incident.
+   */
+  keywords(titles, maxShare = 0.1) {
+    const cnt = new Map();
+    for (const t of titles) for (const f of this.forms(t)) cnt.set(f, (cnt.get(f) ?? 0) + 1);
+    const limit = Math.ceil(this.size * maxShare);
+    return new Set([...cnt].filter(([f, c]) => c >= 2 && c / titles.length >= 0.5 && (this.df.get(f) ?? 0) >= 2 && (this.df.get(f) ?? 0) <= limit).map(([f]) => f));
   }
 }

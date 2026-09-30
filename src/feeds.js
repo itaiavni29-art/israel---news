@@ -1,6 +1,6 @@
 // Polite RSS fetching: conditional GET (ETag / If-Modified-Since), identified User-Agent,
-// timeouts, and per-feed back-off after failures. Only headline, link and date are kept —
-// never article bodies.
+// timeouts, and per-feed back-off after failures. Only headline, link, date and the image URL the
+// site itself put in its feed are kept — never article bodies, and images are never downloaded.
 import { XMLParser } from 'fast-xml-parser';
 import { createHash } from 'node:crypto';
 import { normalizeDate } from './dates.js';
@@ -12,16 +12,34 @@ const parser = new XMLParser({ ignoreAttributes: false, processEntities: false, 
 const text = v => decodeEntities(v == null ? '' : typeof v === 'object' ? (v['#text'] ?? v['@_href'] ?? '') : String(v))
   .replace(/^<!\[CDATA\[|\]\]>$/g, '').trim();
 
+// Bump when parseFeed starts extracting something new, so saved feed items are re-parsed once.
+const PARSER_VERSION = 2; // 2: images
+
 export function parseFeed(xml, source, { now = Date.now() } = {}) {
   const x = parser.parse(xml);
   const raw = [].concat(x?.rss?.channel?.item ?? x?.feed?.entry ?? []);
   if (!raw.length && !x?.rss && !x?.feed) throw new Error('response is not an RSS/Atom document');
-  return raw.map(it => ({
-    title: text(it.title),
-    link: text(it.link) || text(it.guid),
-    publishedAt: normalizeDate(text(it.pubDate ?? it.published ?? it.updated ?? it['dc:date']),
-      { labelIsLocalTime: !!source.dateLabelIsLocalTime, now }),
-  }));
+  return raw.map(it => {
+    const image = feedImage(it);
+    return {
+      title: text(it.title),
+      link: text(it.link) || text(it.guid),
+      publishedAt: normalizeDate(text(it.pubDate ?? it.published ?? it.updated ?? it['dc:date']),
+        { labelIsLocalTime: !!source.dateLabelIsLocalTime, now }),
+      ...(image && { image }),
+    };
+  });
+}
+
+// The image the publisher attached to the item in its own feed: <enclosure type="image/…">,
+// <media:content>/<media:thumbnail>, or the first <img> in the description (ynet, Maariv).
+function feedImage(it) {
+  const attr = (v, name) => [].concat(v ?? []).map(x => x?.[`@_${name}`]).find(Boolean);
+  const enclosures = [].concat(it.enclosure ?? []).filter(e => !e['@_type'] || /^image\//i.test(e['@_type']));
+  let url = attr(enclosures, 'url') ?? attr(it['media:content'], 'url') ?? attr(it['media:thumbnail'], 'url')
+    ?? decodeEntities(text(it.description)).match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
+  url = url && decodeEntities(url).trim();
+  return url && /^https:\/\//i.test(url) ? url : null;
 }
 
 // Stable identity for an article link. Keep the query string (Globes identifies articles by ?did=)
@@ -50,8 +68,10 @@ export class FeedFetcher {
     const st = this.feedState(url);
     if (now < st.skipUntil) return { url, status: 'backoff', items: st.items };
     const headers = { 'User-Agent': this.config.userAgent, Accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8' };
-    if (st.etag) headers['If-None-Match'] = st.etag;
-    if (st.lastModified) headers['If-Modified-Since'] = st.lastModified;
+    // Items saved by an older parser (e.g. before images were read) must be fetched and parsed again.
+    const current = st.parser === PARSER_VERSION;
+    if (current && st.etag) headers['If-None-Match'] = st.etag;
+    if (current && st.lastModified) headers['If-Modified-Since'] = st.lastModified;
     try {
       const res = await fetch(url, { headers, signal: AbortSignal.timeout(this.config.requestTimeoutMs) });
       if (res.status === 304) { st.failures = 0; st.lastOkAt = now; return { url, status: 'not-modified', items: st.items }; }
@@ -60,8 +80,8 @@ export class FeedFetcher {
       st.etag = res.headers.get('etag') ?? undefined;
       st.lastModified = res.headers.get('last-modified') ?? undefined;
       const hash = createHash('sha1').update(body).digest('hex');
-      const changed = hash !== st.hash;
-      if (changed) { st.items = parseFeed(body, source, { now }); st.hash = hash; }
+      const changed = hash !== st.hash || !current;
+      if (changed) { st.items = parseFeed(body, source, { now }); st.hash = hash; st.parser = PARSER_VERSION; }
       st.failures = 0; st.lastOkAt = now; st.lastError = null;
       return { url, status: changed ? 'ok' : 'unchanged', items: st.items };
     } catch (err) {
@@ -90,7 +110,11 @@ export class FeedFetcher {
         if (articles.length || i || rep.feeds.length) await sleep(this.config.delayBetweenRequestsMs);
         const r = await this.fetchOne(source, url, now);
         rep.feeds.push({ url, status: r.status, error: r.error ?? null, items: r.items.length });
-        for (const it of r.items) {
+        // An image URL shared by several items is a site logo / generic placeholder, not the story's photo.
+        const imageUses = new Map();
+        for (const it of r.items) if (it.image) imageUses.set(it.image, (imageUses.get(it.image) ?? 0) + 1);
+        for (let it of r.items) {
+          if (it.image && imageUses.get(it.image) > 2) { const { image, ...rest } = it; it = rest; }
           const why = reject(it) ?? (it.publishedAt == null ? 'bad-date' : now - it.publishedAt > maxAge ? 'too-old' : null);
           if (why) { rep.dropped[why] = (rep.dropped[why] ?? 0) + 1; continue; }
           articles.push({ ...it, key: articleKey(it.link), sourceId: source.id, ...(breaking && { breaking: true }) });

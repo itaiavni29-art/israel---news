@@ -144,6 +144,27 @@ function updatedLine() {
 }
 
 // Where the design shows a photo, we show how widely the story is covered.
+// The event's photo, loaded straight from the source site (as published in its own feed; never copied).
+// If a photo cannot load, the lead/hero fall back to the colored panel and rows to the coverage tile.
+function photo(image, cls) {
+  if (!image?.url || !/^https:\/\//.test(image.url)) return null;
+  return el('img', {
+    class: cls, src: image.url, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
+    onerror: e => { const box = e.target.closest('[data-has-photo]'); if (box) box.removeAttribute('data-has-photo'); e.target.remove(); },
+  });
+}
+const credit = image => (image?.sourceName ? el('span', { class: 'credit' }, `צילום: ${image.sourceName}`) : null);
+
+function thumb(ev, tall = false) {
+  const tile = coverageTile(ev, tall);
+  const img = photo(ev.image, 'thumb-img');
+  if (!img) return tile;
+  const box = el('div', { class: `thumb${tall ? ' tall' : ''}`, 'aria-hidden': 'true' }, img,
+    el('span', { class: `thumb-badge${ev.singleSource ? ' hot' : ''}` }, ev.singleSource ? 'חם' : sourcesText(ev.sourceCount)));
+  img.addEventListener('error', () => box.replaceWith(tile));
+  return box;
+}
+
 function coverageTile(ev, tall = false) {
   if (ev.singleSource) return el('div', { class: `tile hot${tall ? ' tall' : ''}`, 'aria-hidden': 'true' }, el('b', {}, '1'), el('span', {}, 'מקור · חם'));
   return el('div', { class: `tile${tall ? ' tall' : ''}`, 'aria-hidden': 'true' },
@@ -177,7 +198,7 @@ function storyRow(ev, { saved = null } = {}) {
       // (a button may not sit inside a link, so "unsave" is a sibling of the story link)
       saved?.removable && el('button', { class: 'unsave', type: 'button', 'aria-label': `הסרה מהשמורים: ${ev.title}`,
         onclick: () => { toggleSave(ev); toast('הוסר מהשמורים'); route({ refresh: false }); } }, icon('saved')),
-      el('a', { href, tabindex: '-1', 'aria-hidden': 'true', style: 'text-decoration:none' }, coverageTile(ev, !!saved))));
+      el('a', { href, tabindex: '-1', 'aria-hidden': 'true', style: 'text-decoration:none' }, thumb(ev, !!saved))));
 }
 
 function headlineRow(h) {
@@ -211,7 +232,8 @@ function homeView() {
       data?.error && !events.length ? empty('לא הצלחנו לטעון את האירועים.', 'ננסה שוב בעוד דקה.')
         : !lead ? empty(data?.lastScanAt ? 'עדיין לא זוהו אירועים שמסוקרים ביותר ממקור אחד.' : 'סורקים את אתרי החדשות בפעם הראשונה…', 'הדף יתעדכן לבד.')
         : [
-          el('a', { class: 'lead', href: `#/event/${lead.id}`, style: catStyle(lead.category) },
+          el('a', { class: 'lead', href: `#/event/${lead.id}`, style: catStyle(lead.category), 'data-has-photo': lead.image ? '' : null },
+            photo(lead.image, 'bg-photo'), credit(lead.image),
             el('span', { class: 'badge', style: catStyle(lead.category) }, lead.singleSource ? 'חם · מקור אחד' : lead.category?.name ?? 'חדשות'),
             el('h2', { lang: langOf(lead.title) }, lead.title),
             el('p', { class: 'summary' }, `${coverageText(lead)} · זוהה ${ago(lead.detectedAt)}`)),
@@ -261,7 +283,8 @@ function eventView(id, tab) {
 
   return [
     el('div', { class: 'article-chrome' }, header({ title: 'אירוע', dark: true, back: true, share })),
-    el('section', { class: 'hero', style: catStyle(ev.category) },
+    el('section', { class: 'hero', style: catStyle(ev.category), 'data-has-photo': ev.image ? '' : null },
+      photo(ev.image, 'bg-photo'), credit(ev.image),
       el('span', { class: 'badge', style: catStyle(ev.category) }, ev.singleSource ? 'חם · מקור אחד' : ev.category?.name ?? 'חדשות'),
       el('h1', { lang: langOf(ev.title) }, ev.title)),
     el('main', { class: 'screen', id: 'main' },
