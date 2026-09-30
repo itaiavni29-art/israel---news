@@ -147,7 +147,9 @@ function updatedLine() {
 // The event's photo, loaded straight from the source site (as published in its own feed; never copied).
 // If a photo cannot load, the lead/hero fall back to the colored panel and rows to the coverage tile.
 function photo(image, cls) {
-  if (!image?.url || !/^https:\/\//.test(image.url)) return null;
+  // Photos are shown only when the published data allows it (showPhotos), so events saved on the device
+  // before photos were turned off do not keep showing them.
+  if (!data?.showPhotos || !image?.url || !/^https:\/\//.test(image.url)) return null;
   return el('img', {
     class: cls, src: image.url, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
     onerror: e => { const box = e.target.closest('[data-has-photo]'); if (box) box.removeAttribute('data-has-photo'); e.target.remove(); },

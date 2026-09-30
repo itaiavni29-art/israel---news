@@ -128,7 +128,14 @@ export class Scanner {
       minSources: this.config.minSources,
       sources: this.config.sources.filter(s => s.enabled !== false).map(s => ({ id: s.id, name: s.name, color: s.color })),
       categories: CATEGORIES.map(({ id, name, color }) => ({ id, name, color })),
-      events: this.store.active.map(ev => ({ ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) })),
+      // Photos stay off unless the sites allowed it (copyright: news photos are often licensed to the
+      // site only). Turn on with "showPhotos": true in config.json.
+      showPhotos: !!this.config.showPhotos,
+      events: this.store.active.map(ev => {
+        const e = { ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) };
+        if (!this.config.showPhotos) e.image = null;
+        return e;
+      }),
       breaking: pool.filter(a => a.breaking).slice(0, 40).map(item),
       headlines: pool.slice(0, 400).map(item),
     };

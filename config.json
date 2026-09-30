@@ -8,6 +8,7 @@
   "scanIntervalMinutes": 10,
   "maxEvents": 10,
   "singleSourceFallbackMinutes": 10,
+  "showPhotos": false,
   "articleMaxAgeHours": 24,
   "port": 3000,
   "userAgent": "IsraelNewsAggregator/1.0 (personal RSS headline aggregator; polls every few minutes)",
@@ -54,7 +55,7 @@
       "id": "walla",
       "name": "וואלה",
       "color": "#1c5fb4",
-      "enabled": true,
+      "enabled": false,
       "feeds": [
         "https://rss.walla.co.il/feed/1?type=main"
       ],
