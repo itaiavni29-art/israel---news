@@ -13,6 +13,7 @@ import { Embedder } from './embedder.js';
 import { EventStore, presentEvent } from './events.js';
 import { isHebrew } from './text.js';
 import { Categorizer, CATEGORIES, categoryInfo, eventCategory } from './categories.js';
+import { Summarizer } from './summarizer.js';
 import { log } from './log.js';
 
 export class Scanner {
@@ -27,6 +28,9 @@ export class Scanner {
     this.fetcher = new FeedFetcher(config, log);
     this.embedder = new Embedder(config.embeddingModel);
     this.categorizer = new Categorizer(this.embedder);
+    // Summaries: on only when config allows and GEMINI_API_KEY is present (GitHub secret in the cloud).
+    this.summarizer = new Summarizer({ apiKey: config.summaries?.enabled ? process.env.GEMINI_API_KEY : undefined, log });
+    this.lastSummaries = null;
     this.store = new EventStore({
       maxEvents: config.maxEvents,
       minSources: config.minSources,
@@ -51,6 +55,7 @@ export class Scanner {
       if (!fs.existsSync(this.stateFile)) return;
       const saved = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
       this.store.load(saved.store);
+      this.summarizer.load(saved.summarizer);
       this.fetcher.load(saved.feeds);
       this.lastScan = saved.lastScan ?? null;
       // A source switched off in config.json disappears from saved events too.
@@ -66,7 +71,7 @@ export class Scanner {
       fs.renameSync(file + '.tmp', file);
     };
     try {
-      write(this.stateFile, { savedAt: Date.now(), store: this.store.toJSON(), feeds: this.fetcher.toJSON(), lastScan: this.lastScan });
+      write(this.stateFile, { savedAt: Date.now(), store: this.store.toJSON(), feeds: this.fetcher.toJSON(), lastScan: this.lastScan, summarizer: this.summarizer.toJSON() });
       write(path.join(this.publishDir, 'events.json'), this.eventsPayload());
       write(path.join(this.publishDir, 'status.json'), this.status());
     } catch (e) { log.error('[scanner] could not save state:', e.message); }
@@ -90,6 +95,10 @@ export class Scanner {
       for (const ev of [...this.store.active, ...this.store.retired]) for (const a of ev.articles) if (a.category === undefined) a.category = this.categorizer.categorize(a);
 
       const { created, updated, retired, single } = this.store.update([...this.pool.values()], now);
+      if (this.summarizer.enabled) {
+        this.lastSummaries = await this.summarizer.summarizeEvents(this.store.active, this.pool, this.sourcesById, this.config.minSources);
+        log.info(`[summarizer] ${JSON.stringify(this.lastSummaries)}`);
+      }
       this.lastScan = { at: now, durationMs: Date.now() - t0, articles: this.pool.size, created: created.length, single: single ? 1 : 0, updated: updated.length, retired: retired.length, report };
       log.info(`[scanner] ${this.pool.size} headlines, +${created.length} new events${single ? `, +1 hot single-source (${single.hot.join(",") || "fresh"}): ${single.articles[0].title.slice(0, 50)}` : ""}, ${updated.length} updated, ${retired.length} retired (${this.lastScan.durationMs} ms)`);
     } catch (e) {
@@ -131,9 +140,12 @@ export class Scanner {
       // Photos stay off unless the sites allowed it (copyright: news photos are often licensed to the
       // site only). Turn on with "showPhotos": true in config.json.
       showPhotos: !!this.config.showPhotos,
+      // Summaries are generated and published first, and shown in the app only once they were reviewed.
+      showSummaries: !!this.config.summaries?.showOnSite,
       events: this.store.active.map(ev => {
         const e = { ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) };
         if (!this.config.showPhotos) e.image = null;
+        e.summary = ev.summary ? { text: ev.summary.text, model: ev.summary.model, at: ev.summary.at } : null;
         return e;
       }),
       breaking: pool.filter(a => a.breaking).slice(0, 40).map(item),
@@ -146,6 +158,7 @@ export class Scanner {
     return {
       generatedAt: Date.now(),
       lastScan: this.lastScan && { ...this.lastScan, report: undefined },
+      summarizer: { enabled: this.summarizer.enabled, ...this.summarizer.toJSON(), lastRun: this.lastSummaries },
       settings: {
         minSources: this.config.minSources, similarityThreshold: this.config.similarityThreshold,
         crossLanguageThreshold: this.config.crossLanguageThreshold, scanIntervalMinutes: this.config.scanIntervalMinutes,

@@ -291,6 +291,11 @@ function eventView(id, tab) {
       el('h1', { lang: langOf(ev.title) }, ev.title)),
     el('main', { class: 'screen', id: 'main' },
       el('p', { class: 'standfirst' }, coverageText(ev) + '.'),
+      // AI summary written from the sources' headlines and teasers — shown only once enabled after review.
+      data?.showSummaries && ev.summary?.text && el('section', { class: 'ai-summary', 'aria-label': 'סיכום אוטומטי' },
+        el('span', { class: 'ai-label' }, 'סיכום אוטומטי מכמה מקורות'),
+        el('p', { lang: 'he' }, ev.summary.text),
+        el('p', { class: 'ai-note' }, 'נכתב אוטומטית על ידי בינה מלאכותית מתוך הכותרות והתקצירים שפרסמו המקורות. ייתכנו אי־דיוקים — לפרטים המלאים פתחו את הכתבות המקוריות.')),
       el('div', { class: 'byline' },
         el('div', { class: 'who' },
           el('b', {}, ev.singleSource ? 'כתבה חמה ממקור אחד' : 'זוהה אוטומטית בכמה אתרים'),

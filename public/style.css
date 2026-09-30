@@ -311,3 +311,9 @@ h1, h2, h3, p { margin: 0; }
 /* Fixed app scale: no pinch-zoom or double-tap zoom (the page itself also blocks iOS gesture events). */
 html, body { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-x: none; }
 a, button, input, .story, .lead, .topic-tile, .chip { touch-action: manipulation; }
+
+/* AI summary on the event screen */
+.ai-summary { background: var(--surface); border: 1px solid var(--line); border-inline-start: 4px solid var(--brand); border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ai-summary .ai-label { font-size: 12px; font-weight: 700; color: var(--brand); }
+.ai-summary p { font-size: 15px; line-height: 1.6; }
+.ai-summary .ai-note { font-size: 11px; line-height: 1.45; color: var(--faint); }

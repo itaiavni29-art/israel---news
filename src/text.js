@@ -3,7 +3,10 @@
 // dates, punctuation) but keep the grammatical words: the embedding model reads full
 // sentences better than keyword bags.
 
-const ENTITIES = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ', '#39': "'", '#34': '"' };
+const ENTITIES = {
+  amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ', '#39': "'", '#34': '"',
+  bull: '•', ndash: '–', mdash: '—', hellip: '…', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', laquo: '«', raquo: '»',
+};
 
 export function decodeEntities(s) {
   return String(s ?? '')

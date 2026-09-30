@@ -253,7 +253,8 @@ export class EventStore {
   get(id) { return this.active.find(e => e.id === id) ?? null; }
 
   toJSON() {
-    const ser = ev => ({ ...ev, articles: ev.articles.map(a => ({ ...a, vec: Array.from(a.vec, x => +x.toFixed(5)) })) });
+    // (teasers are not saved: the state is public and teasers are the sites' text)
+    const ser = ev => ({ ...ev, articles: ev.articles.map(({ teaser, ...a }) => ({ ...a, vec: Array.from(a.vec, x => +x.toFixed(5)) })) });
     return { active: this.active.map(ser), retired: this.retired.map(ser), lastMultiAt: this.lastMultiAt, lastSingleAt: this.lastSingleAt };
   }
 

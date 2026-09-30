@@ -57,13 +57,21 @@ test('filters: "בשיתוף" inside a real headline is not treated as sponsored
   assert.equal(reject({ title: 'בשיתוף מותג: כך תחסכו', link: 'https://www.maariv.co.il/news/health/article-2' }), 'excluded-title');
 });
 
-test('parseFeed reads CDATA, entities and local-time dates; keeps only title/link/date', () => {
+test('parseFeed reads CDATA, entities, local-time dates and the teaser; saved state never contains teasers', async () => {
   const xml = `<?xml version="1.0" encoding="utf-8"?><rss><channel>
     <item><title><![CDATA[נתניהו &quot;טוען&quot;]]></title><link>https://news.walla.co.il/item/1</link>
-      <pubDate>Mon, 28 Sep 2026 19:20:00 GMT</pubDate><description>body text we must not keep</description></item>
+      <pubDate>Mon, 28 Sep 2026 19:20:00 GMT</pubDate><description>short teaser text from the site</description></item>
   </channel></rss>`;
   const [it] = parseFeed(xml, src('walla'), { now: NOW });
-  assert.deepEqual(Object.keys(it).sort(), ['link', 'publishedAt', 'title']);
+  assert.deepEqual(Object.keys(it).sort(), ['link', 'publishedAt', 'teaser', 'title']);
+  assert.equal(it.teaser, 'short teaser text from the site');
+  const { FeedFetcher } = await import('../src/feeds.js');
+  const f = new FeedFetcher(config, { error() {} });
+  f.state.set('u', { items: [it], etag: 'e' });
+  const saved = JSON.parse(JSON.stringify(f.toJSON()));
+  assert.equal(saved.u.items[0].teaser, undefined); // the saved state is public
+  f.load(saved);
+  assert.equal(f.state.get('u').etag, undefined);   // → next request downloads the feed in full again
   assert.equal(it.title, 'נתניהו "טוען"');
   assert.equal(it.publishedAt, Date.parse('2026-09-28T16:20:00Z'));
   assert.throws(() => parseFeed('<html><body>blocked</body></html>', src('ynet')));

@@ -1,6 +1,7 @@
 // Polite RSS fetching: conditional GET (ETag / If-Modified-Since), identified User-Agent,
-// timeouts, and per-feed back-off after failures. Only headline, link, date and the image URL the
-// site itself put in its feed are kept — never article bodies, and images are never downloaded.
+// timeouts, and per-feed back-off after failures. Kept per item: headline, link, date, the image URL the
+// site put in its feed, and the short feed teaser. Never article bodies; images are never downloaded.
+// Teasers are used only as input for the event summary — they are never published or saved to disk.
 import { XMLParser } from 'fast-xml-parser';
 import { createHash } from 'node:crypto';
 import { normalizeDate } from './dates.js';
@@ -13,7 +14,7 @@ const text = v => decodeEntities(v == null ? '' : typeof v === 'object' ? (v['#t
   .replace(/^<!\[CDATA\[|\]\]>$/g, '').trim();
 
 // Bump when parseFeed starts extracting something new, so saved feed items are re-parsed once.
-const PARSER_VERSION = 2; // 2: images
+const PARSER_VERSION = 3; // 2: images, 3: teasers
 
 export function parseFeed(xml, source, { now = Date.now() } = {}) {
   const x = parser.parse(xml);
@@ -21,12 +22,15 @@ export function parseFeed(xml, source, { now = Date.now() } = {}) {
   if (!raw.length && !x?.rss && !x?.feed) throw new Error('response is not an RSS/Atom document');
   return raw.map(it => {
     const image = feedImage(it);
+    const title = text(it.title);
+    const teaser = feedTeaser(it, title);
     return {
-      title: text(it.title),
+      title,
       link: text(it.link) || text(it.guid),
       publishedAt: normalizeDate(text(it.pubDate ?? it.published ?? it.updated ?? it['dc:date']),
         { labelIsLocalTime: !!source.dateLabelIsLocalTime, now }),
       ...(image && { image }),
+      ...(teaser && { teaser }),
     };
   });
 }
@@ -40,6 +44,15 @@ function feedImage(it) {
     ?? decodeEntities(text(it.description)).match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
   url = url && decodeEntities(url).trim();
   return url && /^https:\/\//i.test(url) ? url : null;
+}
+
+// The short summary the site wrote for the item (the RSS description), as plain text, max ~60 words.
+function feedTeaser(it, title) {
+  const t = decodeEntities(decodeEntities(text(it.description)))
+    .replace(/<[^>]+>/g, ' ').replace(/•/g, ' · ').replace(/\s+/g, ' ').trim();
+  if (t.split(' ').length < 4 || t === title) return null;
+  const words = t.split(' ');
+  return words.length > 60 ? words.slice(0, 60).join(' ') + '…' : t;
 }
 
 // Stable identity for an article link. Keep the query string (Globes identifies articles by ?did=)
@@ -133,8 +146,14 @@ export class FeedFetcher {
 
   // Persist ETag / Last-Modified and the last parsed items, so a fresh process (e.g. a GitHub Actions
   // run) can still send conditional requests and reuse items when the server answers 304.
-  toJSON() { return Object.fromEntries(this.state); }
-  load(json) { this.state = new Map(Object.entries(json ?? {})); }
+  // Teasers are left out: the saved state is public (GitHub data branch), and teasers are the sites' text.
+  toJSON() {
+    return Object.fromEntries([...this.state].map(([url, st]) => [url, { ...st, items: st.items.map(({ teaser, ...it }) => it) }]));
+  }
+  // Saved items have no teasers, so the first request after a restart downloads each feed in full.
+  load(json) {
+    this.state = new Map(Object.entries(json ?? {}).map(([url, st]) => [url, { ...st, etag: undefined, lastModified: undefined, hash: undefined }]));
+  }
 
   snapshotStatus() {
     return Object.fromEntries([...this.state].map(([url, s]) => [url,

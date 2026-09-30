@@ -55,6 +55,8 @@ jobs:
       - name: Scan every few minutes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Gemini key for event summaries (repository secret; never printed or published).
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node scripts/scan-loop.js data 330
 
       - name: Start the next job

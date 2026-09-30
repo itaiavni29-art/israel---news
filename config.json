@@ -9,6 +9,10 @@
   "maxEvents": 10,
   "singleSourceFallbackMinutes": 10,
   "showPhotos": false,
+  "summaries": {
+    "enabled": true,
+    "showOnSite": false
+  },
   "articleMaxAgeHours": 24,
   "port": 3000,
   "userAgent": "IsraelNewsAggregator/1.0 (personal RSS headline aggregator; polls every few minutes)",
