@@ -151,7 +151,7 @@
       "id": "c14",
       "name": "ערוץ 14",
       "color": "#3949ab",
-      "enabled": true,
+      "enabled": false,
       "feeds": [
         "https://www.c14.co.il/feed"
       ]
