@@ -10,7 +10,7 @@ import { log } from './src/log.js';
 const config = loadConfig();
 const scanner = new Scanner(config); // writes public/events.json + public/status.json after each scan
 const PUBLIC = path.join(ROOT, 'public');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.webmanifest': 'application/manifest+json; charset=utf-8' };
 
 const server = http.createServer((req, res) => {
   try {

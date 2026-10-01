@@ -1,6 +1,8 @@
-// חדשות ישראל — client. Plain DOM (no framework); all text goes through textContent (no HTML injection).
+// כאן ועכשיו — client. Plain DOM (no framework); all text goes through textContent (no HTML injection).
 // Screens follow the Figma file "אפליקציית חדשות": בית · אירוע (כתבה) · מבזקים · נושאים · שמורים.
 const app = document.getElementById('app');
+const BRAND = 'כאן ועכשיו';
+const TAGLINE = 'חדשות שקורות עכשיו';
 const NEW_MS = 10 * 60_000;
 
 let data = null; // last events.json
@@ -83,6 +85,8 @@ function el(tag, attrs = {}, ...children) {
   for (const c of children.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : String(c));
   return n;
 }
+// Brand mark: two corners framing a red dot ("the moment, here and now").
+const brandMark = () => el('img', { class: 'brand-mark', src: 'logo-mark.svg', alt: '', width: 26, height: 26 });
 const icon = name => el('span', { class: `icon i-${name}`, 'aria-hidden': 'true' });
 const now = () => Date.now();
 const hhmm = ms => new Date(ms).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
@@ -129,7 +133,7 @@ function header({ title, brand = false, dark = false, back = false, share = null
       ? el('a', { class: 'icon-btn', href: '#/', 'aria-label': 'חזרה', onclick: e => { if (history.length > 1) { e.preventDefault(); history.back(); } } }, icon('back'))
       : el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'תפריט', onclick: openMenu }, icon('menu')),
     brand
-      ? el('a', { class: 'brand', href: '#/' }, el('span', { class: 'brand-mark', 'aria-hidden': 'true' }), el('span', { class: 'brand-name' }, 'חדשות ישראל'))
+      ? el('a', { class: 'brand', href: '#/' }, brandMark(), el('span', { class: 'brand-name' }, BRAND))
       : el('span', { class: 'screen-title' }, title),
     share
       ? el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'שיתוף', onclick: share }, icon('share'))
@@ -215,7 +219,7 @@ function empty(...lines) { return el('div', { class: 'empty' }, lines.map(l => e
 
 // ---------- screens ----------
 function homeView() {
-  document.title = 'חדשות ישראל';
+  document.title = BRAND;
   const latestBreaking = data?.breaking?.[0];
   const events = data?.events ?? [];
   const [lead, ...rest] = events;
@@ -228,7 +232,7 @@ function homeView() {
       el('time', { datetime: new Date(latestBreaking.publishedAt).toISOString() }, hhmm(latestBreaking.publishedAt))),
     el('main', { class: 'screen', id: 'main' },
       el('div', { class: 'edition' }, el('h1', {}, greeting()), el('span', { class: 'date' }, `${dayName(d)}, ${dayMonth(d)}`)),
-      el('p', { class: 'tagline' }, 'החדשות שמסוקרות עכשיו במספר מקורות'),
+      el('p', { class: 'tagline' }, TAGLINE),
       updatedLine(),
       data?.error && !events.length ? empty('לא הצלחנו לטעון את האירועים.', 'ננסה שוב בעוד דקה.')
         : !lead ? empty(data?.lastScanAt ? 'עדיין לא זוהו אירועים שמסוקרים ביותר ממקור אחד.' : 'סורקים את אתרי החדשות בפעם הראשונה…', 'הדף יתעדכן לבד.')
@@ -248,7 +252,7 @@ function homeView() {
 function eventView(id, tab) {
   const ev = findEvent(id);
   if (!ev) return [header({ title: 'אירוע', back: true }), el('main', { class: 'screen' }, empty('האירוע כבר לא ברשימה.', 'ייתכן שהוחלף באירוע חדש יותר.'))];
-  document.title = `${ev.title} · חדשות ישראל`;
+  document.title = `${ev.title} · ${BRAND}`;
   remember(ev);
   const bySource = new Map();
   for (const a of ev.articles) bySource.set(a.sourceId, [...(bySource.get(a.sourceId) ?? []), a]);
@@ -320,7 +324,7 @@ function eventView(id, tab) {
 }
 
 function liveView() {
-  document.title = 'מבזקים · חדשות ישראל';
+  document.title = 'מבזקים · ' + BRAND;
   const items = (data?.breaking ?? []).filter(b => now() - b.publishedAt < 24 * 3600_000);
   const names = [...new Set(items.map(b => b.sourceName))];
   return [
@@ -347,7 +351,7 @@ function liveView() {
 
 const topicState = { q: '', sources: new Set() };
 function topicsView(catId) {
-  document.title = 'נושאים · חדשות ישראל';
+  document.title = 'נושאים · ' + BRAND;
   const all = data?.headlines ?? [];
   const cats = data?.categories ?? [];
   const cat = catId ? cats.find(c => c.id === catId) : null;
@@ -402,7 +406,7 @@ function rerenderKeepingFocus() {
 }
 
 function savedView(tab) {
-  document.title = 'שמורים · חדשות ישראל';
+  document.title = 'שמורים · ' + BRAND;
   const saved = store.get(SAVED), hist = store.get(HISTORY);
   const current = tab === 'history' ? 'history' : 'saved';
   const list = current === 'saved' ? saved : hist;
@@ -426,7 +430,7 @@ function savedView(tab) {
 }
 
 async function statusView() {
-  document.title = 'מצב המקורות · חדשות ישראל';
+  document.title = 'מצב המקורות · ' + BRAND;
   let s;
   try { s = await (await fetch(dataUrl('status.json'), { cache: 'no-store' })).json(); } catch { s = null; }
   const body = !s ? empty('אין חיבור לשרת.') : [
@@ -450,7 +454,7 @@ function openMenu() {
   const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
   const sheet = el('aside', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'תפריט' },
     el('div', { class: 'sheet-head' },
-      el('a', { class: 'brand', href: '#/', onclick: close, style: 'border:0' }, el('span', { class: 'brand-mark' }), el('span', { class: 'brand-name', style: 'font-size:20px' }, 'חדשות ישראל')),
+      el('a', { class: 'brand', href: '#/', onclick: close, style: 'border:0' }, brandMark(), el('span', { class: 'brand-name', style: 'font-size:20px' }, BRAND)),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     link('#/', 'house', 'בית'), link('#/live', 'radio', 'מבזקים'), link('#/topics', 'grid', 'נושאים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));

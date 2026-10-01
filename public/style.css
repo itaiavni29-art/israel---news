@@ -1,4 +1,4 @@
-/* חדשות ישראל — visual design from the Figma file "אפליקציית חדשות" (5 mobile screens, 390px wide). */
+/* כאן ועכשיו — visual design from the Figma file "אפליקציית חדשות" (5 mobile screens, 390px wide). */
 :root {
   --bg: #f5f2eb;
   --surface: #ffffff;
@@ -64,8 +64,8 @@ h1, h2, h3, p { margin: 0; }
 }
 .icon-btn:hover { background: rgba(23, 25, 24, .06); }
 .icon-btn:focus-visible, .tab:focus-visible, .nav-item:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
-.brand { display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); }
-.brand-mark { width: 5px; height: 23px; background: var(--brand); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand-mark { width: 26px; height: 26px; display: block; }
 .brand-name { font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
 .screen-title { font-size: 15px; font-weight: 700; }
 .app-header.dark { background: var(--night); border-bottom-color: rgba(255, 255, 255, .16); color: #fff; }
