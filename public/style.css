@@ -317,3 +317,8 @@ a, button, input, .story, .lead, .topic-tile, .chip { touch-action: manipulation
 .ai-summary .ai-label { font-size: 12px; font-weight: 700; color: var(--brand); }
 .ai-summary p { font-size: 15px; line-height: 1.6; }
 .ai-summary .ai-note { font-size: 11px; line-height: 1.45; color: var(--faint); }
+
+/* Small "קרא עוד" beside each story (replaces the coverage box) */
+.read-more { flex: none; color: var(--brand); font-size: 12px; font-weight: 700; white-space: nowrap; padding: 8px 0; }
+.story:hover .read-more { text-decoration: underline; text-underline-offset: 3px; }
+.story { min-height: 0; padding: 14px 0; }

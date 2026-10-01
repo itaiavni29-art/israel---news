@@ -167,11 +167,10 @@ function thumb(ev, tall = false) {
   return box;
 }
 
-function coverageTile(ev, tall = false) {
-  if (ev.singleSource) return el('div', { class: `tile hot${tall ? ' tall' : ''}`, 'aria-hidden': 'true' }, el('b', {}, '1'), el('span', {}, 'מקור · חם'));
-  return el('div', { class: `tile${tall ? ' tall' : ''}`, 'aria-hidden': 'true' },
-    el('b', {}, String(ev.sourceCount)), el('span', {}, 'מקורות'),
-    el('span', { class: 'dots' }, ev.sources.map(s => el('i', { style: `background:${s.color}` }))));
+// Beside each story (where a photo would be): just a small "קרא עוד". The number of sources is already
+// in the line under the headline, and "חם" has its own badge.
+function coverageTile() {
+  return el('span', { class: 'read-more' }, 'קרא עוד');
 }
 
 function coverageText(ev) {
