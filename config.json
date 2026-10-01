@@ -148,6 +148,24 @@
       ]
     },
     {
+      "id": "c14",
+      "name": "ערוץ 14",
+      "color": "#3949ab",
+      "enabled": true,
+      "feeds": [
+        "https://www.c14.co.il/feed"
+      ]
+    },
+    {
+      "id": "inn",
+      "name": "ערוץ 7",
+      "color": "#c2185b",
+      "enabled": true,
+      "feeds": [
+        "https://www.inn.co.il/Rss.aspx?act=.1"
+      ]
+    },
+    {
       "id": "jpost",
       "name": "Jerusalem Post",
       "color": "#2d6a4f",
