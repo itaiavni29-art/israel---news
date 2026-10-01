@@ -168,3 +168,14 @@ test('a summary rejected on one model is tried on the next one; the reason is re
   assert.equal(ev2.summary, undefined);
   assert.match(t.toJSON().rejections[0].why, /numbers not in sources: 12/);
 });
+
+test('repeating a quoted statement is not copying (multi-source); acronyms are not mistaken for quotes', async () => {
+  const { withoutQuotes } = await import('../src/summarizer.js');
+  const src = ['נתניהו לגיבורי הטיסה מדובאי: "אתם תשיאו משואה של גבורה אזרחית ביום העצמאות הקרוב"', 'רה"מ נפגש עם הנוסעים שהשתלטו על המטוס'];
+  const sum = 'ראש הממשלה נפגש עם הנוסעים שעצרו את ניסיון הריסוק ואמר להם: "אתם תשיאו משואה של גבורה אזרחית ביום העצמאות הקרוב". המפגש נערך לאחר שובם ארצה.';
+  assert.equal(checkSummary(sum, src), null);                                   // the quote itself is fine
+  assert.match(checkSummary(sum, src, { single: true }), /copies/);             // but not for a single source
+  const copiedProse = 'בפגישה אמר כי רה"מ נפגש עם הנוסעים שהשתלטו על המטוס לאחר האירוע, והוסיף דברי שבח רבים למעשיהם האמיצים.';
+  assert.match(checkSummary(copiedProse, src), /copies 7/);                     // the site's own sentence still counts
+  assert.equal(withoutQuotes('ראש השב"כ רונן בר הזהיר מ"הסופה המושלמת" לפני 7/10'), 'ראש השב"כ רונן בר הזהיר מ ⟦ציטוט⟧  לפני 7/10');
+});

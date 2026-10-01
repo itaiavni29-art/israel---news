@@ -47,7 +47,7 @@ const PROMPT_SINGLE = `אתה עורך חדשות. לפניך כותרת ותק�
 - החזר רק את טקסט הסיכום.`;
 
 // Bump when prompts or checks change: events whose summary failed under older rules get another try.
-const RULES_VERSION = 2;
+const RULES_VERSION = 3;
 
 // What to tell the model when its previous attempt failed a check (in Hebrew, and actionable).
 const HINT = (why, single) =>
@@ -87,6 +87,18 @@ export function trigramOverlap(summary, sourceTexts) {
 }
 
 /**
+ * Replace quoted speech in a source text with a marker, so a shared run of words cannot be "found"
+ * inside a quotation. Hebrew acronyms also contain a quote mark (צה"ל, שב"כ): there the mark is
+ * followed by exactly one final letter, which is how they are told apart from an opening quote.
+ */
+export function withoutQuotes(text) {
+  return String(text)
+    .replace(/(?<=[א-ת])["״](?=[א-ת](?![א-ת]))/g, '\u0001') // protect acronym marks
+    .replace(/["״“”][^"״“”]{3,160}["״“”]/g, ' ⟦ציטוט⟧ ')
+    .replace(/\u0001/g, '"');
+}
+
+/**
  * @param {{single?: boolean}} opts single-source summaries are held to a stricter standard: they
  *   rewrite one site's item, so they must be clearly further from its wording.
  * @returns {string|null} why the summary is rejected, or null if it is acceptable
@@ -98,7 +110,10 @@ export function checkSummary(summary, sourceTexts, { single = false } = {}) {
   const known = new Set(sourceTexts.flatMap(numbers));
   const invented = numbers(summary).filter(x => !known.has(x));
   if (invented.length) return `numbers not in sources: ${invented.join(', ')}`;
-  const copied = Math.max(0, ...sourceTexts.map(t => longestSharedRun(summary, t)));
+  // For multi-source events, words someone was quoted as saying ("…") are not the site's own wording,
+  // so repeating the quote is not counted as copying. Single-source summaries stay strict.
+  const texts = single ? sourceTexts : sourceTexts.map(withoutQuotes);
+  const copied = Math.max(0, ...texts.map(t => longestSharedRun(summary, t)));
   if (copied >= (single ? 5 : 7)) return `copies ${copied} consecutive words from a source`;
   if (single) {
     const overlap = trigramOverlap(summary, sourceTexts);
