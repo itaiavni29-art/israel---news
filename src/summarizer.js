@@ -30,6 +30,18 @@ const PROMPT = `אתה עורך חדשות. לפניך כותרות ותקציר
 - אל תזכיר את שמות האתרים, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
 - החזר רק את טקסט הסיכום.`;
 
+// A "hot" story has ONE source, so the summary must stay well away from that site's wording:
+// facts only, restructured, short — and it is checked more strictly (see checkSummary).
+const PROMPT_SINGLE = `אתה עורך חדשות. לפניך כותרת ותקציר של ידיעה אחת מאתר חדשות.
+מסור את העובדות המרכזיות שבה בעברית, בניסוח שלך: 2 עד 3 משפטים, עד 50 מילים.
+כללים:
+- הניסוח חייב להיות רחוק מהמקור: בנה את המשפטים אחרת, בסדר אחר ובמילים אחרות. אל תשמור על ביטויים ייחודיים, דימויים או סגנון של הכותב.
+- אל תעתיק רצף של יותר משלוש מילים מהמקור (חוץ משמות של אנשים, מקומות וגופים).
+- מסור עובדות בלבד: בלי ציטוטים, בלי פרשנות ובלי הערכות של הכותב.
+- השתמש רק במידע שמופיע בטקסט שלמטה. אל תוסיף שמות, מספרים, תאריכים או סיבות שלא כתובים שם.
+- אל תזכיר את שם האתר, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
+- החזר רק את טקסט הסיכום.`;
+
 const pacificDay = (ms = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: DAY_TZ }).format(ms);
 const words = s => cleanTitle(s).split(' ').filter(Boolean);
 const numbers = s => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map(n => n.replace(',', '.'));
@@ -51,22 +63,40 @@ export function longestSharedRun(a, b) {
   return best;
 }
 
-/** @returns {string|null} why the summary is rejected, or null if it is acceptable */
-export function checkSummary(summary, sourceTexts) {
+/** Share (0..1) of the summary's three-word sequences that also appear in the source texts. */
+export function trigramOverlap(summary, sourceTexts) {
+  const grams = t => { const w = words(t); return w.slice(0, -2).map((_, i) => w.slice(i, i + 3).join(' ')); };
+  const mine = grams(summary);
+  if (!mine.length) return 0;
+  const theirs = new Set(sourceTexts.flatMap(grams));
+  return mine.filter(g => theirs.has(g)).length / mine.length;
+}
+
+/**
+ * @param {{single?: boolean}} opts single-source summaries are held to a stricter standard: they
+ *   rewrite one site's item, so they must be clearly further from its wording.
+ * @returns {string|null} why the summary is rejected, or null if it is acceptable
+ */
+export function checkSummary(summary, sourceTexts, { single = false } = {}) {
   const n = words(summary).length;
   if (!/[א-ת]/.test(summary)) return 'not Hebrew';
-  if (n < 15 || n > 110) return `length ${n} words`;
+  if (n < (single ? 10 : 15) || n > (single ? 70 : 110)) return `length ${n} words`;
   const known = new Set(sourceTexts.flatMap(numbers));
   const invented = numbers(summary).filter(x => !known.has(x));
   if (invented.length) return `numbers not in sources: ${invented.join(', ')}`;
   const copied = Math.max(0, ...sourceTexts.map(t => longestSharedRun(summary, t)));
-  if (copied >= 7) return `copies ${copied} consecutive words from a source`;
+  if (copied >= (single ? 5 : 7)) return `copies ${copied} consecutive words from a source`;
+  if (single) {
+    const overlap = trigramOverlap(summary, sourceTexts);
+    if (overlap > 0.25) return `too close to the source (${Math.round(overlap * 100)}% of its three-word sequences)`;
+  }
   return null;
 }
 
 export class Summarizer {
-  constructor({ apiKey = process.env.GEMINI_API_KEY, log = console, maxPerScan = 12, fetchImpl = fetch } = {}) {
-    Object.assign(this, { apiKey, log, maxPerScan, fetch: fetchImpl });
+  constructor({ apiKey = process.env.GEMINI_API_KEY, log = console, maxPerScan = 12, fetchImpl = fetch, singleSource = false } = {}) {
+    // singleSource: also summarize "hot" single-source stories (stricter prompt and checks).
+    Object.assign(this, { apiKey, log, maxPerScan, fetch: fetchImpl, singleSource });
     this.models = null;       // [{ name, perDay, perMinute, noSystem }] available to this key, best first
     this.usage = { day: pacificDay(), counts: {} };
     this.minute = new Map();  // model -> timestamps of calls in the last minute
@@ -110,12 +140,12 @@ export class Summarizer {
     return recent.length < m.perMinute;
   }
 
-  async generate(m, userText) {
-    const text = m.noSystem ? `${PROMPT}\n\n${userText}` : userText;
+  async generate(m, userText, prompt = PROMPT) {
+    const text = m.noSystem ? `${prompt}\n\n${userText}` : userText;
     const body = {
       contents: [{ role: 'user', parts: [{ text }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
-      ...(m.noSystem ? {} : { systemInstruction: { parts: [{ text: PROMPT }] } }),
+      ...(m.noSystem ? {} : { systemInstruction: { parts: [{ text: prompt }] } }),
     };
     const now = Date.now();
     this.usage.counts[m.name] = (this.usage.counts[m.name] ?? 0) + 1;
@@ -141,31 +171,39 @@ export class Summarizer {
     if (!this.enabled) return { done: 0, skipped: 'no GEMINI_API_KEY' };
     let done = 0, rejected = 0;
     try { await this.discoverModels(); } catch (e) { this.lastError = e.message; this.log.error(`[summarizer] ${e.message}`); return { done, error: e.message }; }
+    const teaserOf = a => pool.get(a.key)?.teaser ?? a.teaser;
+    const isSingle = ev => !!ev.provisional || new Set(ev.articles.map(a => a.sourceId)).size < minSources;
     const todo = events.filter(ev => {
       const n = new Set(ev.articles.map(a => a.sourceId)).size;
       // (a summary that failed the checks is retried only when another source joins)
-      return n >= minSources && !ev.provisional && (!ev.summary || ev.summary.sourceCount < n) && ev.summaryTried !== n;
+      if ((ev.summary && ev.summary.sourceCount >= n) || ev.summaryTried === n) return false;
+      if (!isSingle(ev)) return true;
+      // A hot story is summarized only if the site gave a teaser with real content — rewording a bare
+      // headline adds nothing.
+      return this.singleSource && ev.articles.some(a => words(teaserOf(a) ?? '').length >= 12);
     });
     for (const ev of todo.slice(0, this.maxPerScan)) {
       const sources = [];
       for (const a of ev.articles) {
-        const teaser = pool.get(a.key)?.teaser ?? a.teaser;
+        const teaser = teaserOf(a);
         sources.push({ name: sourcesById[a.sourceId]?.name ?? a.sourceId, title: a.title, teaser });
       }
-      const userText = sources.map((s, i) => `מקור ${i + 1}:\nכותרת: ${s.title}${s.teaser ? `\nתקציר: ${s.teaser}` : ''}`).join('\n\n');
+      const single = isSingle(ev);
+      const prompt = single ? PROMPT_SINGLE : PROMPT;
+      const userText = sources.map((s, i) => `${single ? 'ידיעה' : 'מקור'} ${i + 1}:\nכותרת: ${s.title}${s.teaser ? `\nתקציר: ${s.teaser}` : ''}`).join('\n\n');
       const sourceTexts = sources.flatMap(s => [s.title, s.teaser].filter(Boolean));
       const sourceCount = new Set(ev.articles.map(a => a.sourceId)).size;
       for (const m of this.models) {
         if (!this.canUse(m, Date.now())) continue;
         try {
-          let text = await this.generate(m, userText);
-          let why = checkSummary(text, sourceTexts);
+          let text = await this.generate(m, userText, prompt);
+          let why = checkSummary(text, sourceTexts, { single });
           if (why && this.canUse(m, Date.now())) { // one retry, with the reason spelled out
-            text = await this.generate(m, `${userText}\n\nהערה: הניסיון הקודם נפסל (${why}). הקפד על הכללים.`);
-            why = checkSummary(text, sourceTexts);
+            text = await this.generate(m, `${userText}\n\nהערה: הניסיון הקודם נפסל (${why}). הקפד על הכללים${single ? ', ונסח רחוק יותר מהמקור' : ''}.`, prompt);
+            why = checkSummary(text, sourceTexts, { single });
           }
           if (why) { rejected++; ev.summaryTried = sourceCount; this.log.info?.(`[summarizer] rejected (${why}): ${ev.articles[0].title.slice(0, 50)}`); break; }
-          ev.summary = { text, model: m.name.replace('models/', ''), at: Date.now(), sourceCount };
+          ev.summary = { text, model: m.name.replace('models/', ''), at: Date.now(), sourceCount, ...(single && { single: true }) };
           done++;
           break;
         } catch (e) {

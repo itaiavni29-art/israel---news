@@ -29,7 +29,10 @@ export class Scanner {
     this.embedder = new Embedder(config.embeddingModel);
     this.categorizer = new Categorizer(this.embedder);
     // Summaries: on only when config allows and GEMINI_API_KEY is present (GitHub secret in the cloud).
-    this.summarizer = new Summarizer({ apiKey: config.summaries?.enabled ? process.env.GEMINI_API_KEY : undefined, log });
+    this.summarizer = new Summarizer({
+      apiKey: config.summaries?.enabled ? process.env.GEMINI_API_KEY : undefined, log,
+      singleSource: !!config.summaries?.singleSource, // also summarize "hot" single-source stories
+    });
     this.lastSummaries = null;
     this.store = new EventStore({
       maxEvents: config.maxEvents,
@@ -145,7 +148,7 @@ export class Scanner {
       events: this.store.active.map(ev => {
         const e = { ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) };
         if (!this.config.showPhotos) e.image = null;
-        e.summary = ev.summary ? { text: ev.summary.text, model: ev.summary.model, at: ev.summary.at } : null;
+        e.summary = ev.summary ? { text: ev.summary.text, model: ev.summary.model, at: ev.summary.at, single: !!ev.summary.single } : null;
         return e;
       }),
       breaking: pool.filter(a => a.breaking).slice(0, 40).map(item),

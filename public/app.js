@@ -293,9 +293,14 @@ function eventView(id, tab) {
       el('p', { class: 'standfirst' }, coverageText(ev) + '.'),
       // AI summary written from the sources' headlines and teasers — shown only once enabled after review.
       data?.showSummaries && ev.summary?.text && el('section', { class: 'ai-summary', 'aria-label': 'סיכום אוטומטי' },
-        el('span', { class: 'ai-label' }, 'סיכום אוטומטי מכמה מקורות'),
+        // A single-source summary names its source and links straight to the original article.
+        el('span', { class: 'ai-label' }, ev.summary.single ? `סיכום אוטומטי · לפי ${ev.articles[0]?.sourceName ?? ''}` : 'סיכום אוטומטי מכמה מקורות'),
         el('p', { lang: 'he' }, ev.summary.text),
-        el('p', { class: 'ai-note' }, 'נכתב אוטומטית על ידי בינה מלאכותית מתוך הכותרות והתקצירים שפרסמו המקורות. ייתכנו אי־דיוקים — לפרטים המלאים פתחו את הכתבות המקוריות.')),
+        ev.summary.single && ev.articles[0] && el('a', { class: 'open-link', href: safeUrl(ev.articles[0].link), target: '_blank', rel: 'noopener noreferrer' },
+          `לכתבה המלאה ב-${ev.articles[0].sourceName} ↗`),
+        el('p', { class: 'ai-note' }, ev.summary.single
+          ? 'נכתב אוטומטית על ידי בינה מלאכותית, בניסוח עצמאי, על סמך הכותרת והתקציר שפרסם המקור. ייתכנו אי־דיוקים — הכתבה המלאה נמצאת באתר המקורי.'
+          : 'נכתב אוטומטית על ידי בינה מלאכותית מתוך הכותרות והתקצירים שפרסמו המקורות. ייתכנו אי־דיוקים — לפרטים המלאים פתחו את הכתבות המקוריות.')),
       el('div', { class: 'byline' },
         el('div', { class: 'who' },
           el('b', {}, ev.singleSource ? 'כתבה חמה ממקור אחד' : 'זוהה אוטומטית בכמה אתרים'),

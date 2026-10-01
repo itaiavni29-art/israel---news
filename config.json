@@ -11,7 +11,8 @@
   "showPhotos": false,
   "summaries": {
     "enabled": true,
-    "showOnSite": true
+    "showOnSite": true,
+    "singleSource": true
   },
   "articleMaxAgeHours": 24,
   "port": 3000,

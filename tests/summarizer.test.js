@@ -103,3 +103,49 @@ test('teasers come from the live feed pool (they are never saved) and reach the 
   await s.summarizeEvents([ev], pool, { ynet: { name: 'ynet' } });
   assert.ok(calls.at(-1).body.contents[0].parts[0].text.includes(`תקציר: ${SRC[1]}`));
 });
+
+// ---------- single-source ("hot") summaries ----------
+const HOT_TITLE = 'הממשלה אישרה מסגרת של עד 200 אלף מילואימניקים בצו 8';
+const HOT_TEASER = 'בהצבעה טלפונית אישרו השרים את בקשת מערכת הביטחון להרחיב את מסגרת הגיוס בצו 8 עד 200 אלף חיילי מילואים, על רקע המתיחות בצפון וההיערכות לאפשרות של הסלמה';
+const HOT_GOOD = 'מספר חיילי המילואים שניתן לזמן בצו 8 הוגדל ל-200 אלף, לאחר שהשרים נענו לדרישת צה"ל. ההחלטה התקבלה בסבב טלפוני, בשל החשש מהידרדרות בגבול הצפוני.';
+
+test('single-source check is stricter: 5 copied words or a text close to the source is rejected', () => {
+  const src = [HOT_TITLE, HOT_TEASER];
+  assert.equal(checkSummary(HOT_GOOD, src, { single: true }), null);
+  // a 5–6 word run is fine for multi-source summaries but not for a single source
+  const fiveCopied = 'השרים החליטו להרחיב את מסגרת הגיוס בצו 8 לאחר פנייה של צה"ל, בגלל החשש מהידרדרות בגבול הצפוני.';
+  assert.equal(checkSummary(fiveCopied, src), null);
+  assert.match(checkSummary(fiveCopied, src, { single: true }), /copies [56] consecutive words/);
+  // many short borrowed fragments, no long run → still too close
+  const patchwork = 'בהצבעה טלפונית אישרו בממשלה את בקשת מערכת הביטחון, והרחיבו את מסגרת הגיוס עד 200 אלף חיילי מילואים, על רקע המתיחות.';
+  assert.match(checkSummary(patchwork, src, { single: true }), /too close to the source|copies/);
+});
+
+test('hot stories are summarized only when enabled and only if the site gave a real teaser', async () => {
+  const hot = (id, teaser) => ({ id, provisional: true, articles: [{ key: id, sourceId: 'maariv', title: HOT_TITLE, teaser }] });
+  const off = new Summarizer({ apiKey: 'k', log: quiet, fetchImpl: fakeApi({}) });
+  assert.equal((await off.summarizeEvents([hot('a', HOT_TEASER)], new Map(), {})).done, 0);
+
+  const calls = [];
+  const on = new Summarizer({ apiKey: 'k', log: quiet, singleSource: true, fetchImpl: fakeApi({ 'gemini-3.5-flash-lite': [{ text: HOT_GOOD }] }, calls) });
+  const withTeaser = hot('b', HOT_TEASER), bare = hot('c', undefined);
+  const r = await on.summarizeEvents([withTeaser, bare], new Map(), { maariv: { name: 'מעריב' } });
+  assert.equal(r.done, 1);
+  assert.equal(withTeaser.summary.single, true);
+  assert.equal(bare.summary, undefined);                       // headline only → nothing to summarize
+  const sent = calls.at(-1).body;
+  assert.match(sent.systemInstruction.parts[0].text, /רחוק מהמקור/); // the stricter instructions were used
+});
+
+test('when a second site covers a hot story, its summary is rewritten from all sources', async () => {
+  const script = { 'gemini-3.5-flash-lite': [{ text: HOT_GOOD }, { text: GOOD }] };
+  const s = new Summarizer({ apiKey: 'k', log: quiet, singleSource: true, fetchImpl: fakeApi(script) });
+  const ev = { id: 'u', provisional: true, articles: [{ key: 'u1', sourceId: 'maariv', title: HOT_TITLE, teaser: HOT_TEASER }] };
+  await s.summarizeEvents([ev], new Map(), {});
+  assert.equal(ev.summary.single, true);
+  delete ev.provisional;                                          // confirmed by another site
+  ev.articles.push({ key: 'u2', sourceId: 'ynet', title: SRC[0], teaser: SRC[1] }, { key: 'u3', sourceId: 'srugim', title: SRC[2] });
+  await s.summarizeEvents([ev], new Map(), {});
+  assert.equal(ev.summary.single, undefined);
+  assert.equal(ev.summary.sourceCount, 3);
+});
