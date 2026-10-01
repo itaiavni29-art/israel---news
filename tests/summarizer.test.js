@@ -149,3 +149,22 @@ test('when a second site covers a hot story, its summary is rewritten from all s
   assert.equal(ev.summary.single, undefined);
   assert.equal(ev.summary.sourceCount, 3);
 });
+
+test('a summary rejected on one model is tried on the next one; the reason is recorded only if all fail', async () => {
+  const bad = GOOD + ' בפגישה השתתפו 12 שרים.';
+  const script = { 'gemini-3.5-flash-lite': [{ text: bad }, { text: bad }], 'gemini-3.1-flash-lite': [{ text: GOOD }] };
+  const s = new Summarizer({ apiKey: 'k', log: quiet, fetchImpl: fakeApi(script) });
+  const ev = event('fb');
+  const r = await s.summarizeEvents([ev], new Map(), {});
+  assert.equal(r.done, 1);
+  assert.equal(ev.summary.model, 'gemini-3.1-flash-lite');
+  assert.equal(s.rejections.length, 0);
+
+  const allBad = { 'gemini-3.5-flash-lite': [{ text: bad }, { text: bad }], 'gemini-3.1-flash-lite': [{ text: bad }, { text: bad }], 'gemma-4-31b-it': [{ text: bad }, { text: bad }] };
+  const t = new Summarizer({ apiKey: 'k', log: quiet, fetchImpl: fakeApi(allBad) });
+  const ev2 = event('fb2');
+  const r2 = await t.summarizeEvents([ev2], new Map(), {});
+  assert.equal(r2.rejected, 1);
+  assert.equal(ev2.summary, undefined);
+  assert.match(t.toJSON().rejections[0].why, /numbers not in sources: 12/);
+});

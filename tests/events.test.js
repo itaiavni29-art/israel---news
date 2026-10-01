@@ -194,3 +194,15 @@ test('story keyword: two angles of one story (shared "פליי דובאי") merg
   t.update([...filler, ...sms, ...mortgage], 2000);
   assert.equal(t.active.length, 2); // no shared story keyword → stay apart
 });
+
+test('with summaries on, a hot story is picked only if it came with a teaser to summarize', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const flash = { ...art('ynet', 98), publishedAt: T0 + 9 * MIN, breaking: true };                 // newer, breaking, headline only
+  const full = { ...art('maariv', 99), publishedAt: T0, teaser: 'תקציר אמיתי של הכתבה שמכיל מספיק מילים כדי שיהיה מה לסכם ממנו בצורה הגונה' };
+  const plain = store({ singleSourceFallbackMs: 10 * MIN });
+  assert.equal(plain.update([flash, full], T0 + 10 * MIN).single.articles[0].key, flash.key);          // old behaviour
+  const strict = store({ singleSourceFallbackMs: 10 * MIN, hotNeedsTeaser: true });
+  assert.equal(strict.update([flash, full], T0 + 10 * MIN).single.articles[0].key, full.key);
+  const none = store({ singleSourceFallbackMs: 10 * MIN, hotNeedsTeaser: true });
+  assert.equal(none.update([flash], T0 + 10 * MIN).single, null);                                     // nothing summarizable → no hot card
+});

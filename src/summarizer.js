@@ -27,6 +27,8 @@ const PROMPT = `אתה עורך חדשות. לפניך כותרות ותקציר
 - השתמש רק במידע שמופיע בטקסטים שלמטה. אל תוסיף שמות, מספרים, תאריכים, סיבות או הערכות שלא כתובים שם.
 - אם המקורות סותרים זה את זה, ציין זאת בקצרה.
 - נסח במילים שלך. אל תעתיק משפטים או חלקי משפטים מהמקורות.
+- אל תעתיק ציטוטים ארוכים: מסור את תוכן הדברים בלשון עקיפה ("לדבריו…"), ולכל היותר צטט שלוש-ארבע מילים.
+- מספרים כתוב בספרות ובאותה צורה שבה הם מופיעים במקורות.
 - שמות של אנשים, מקומות, גופים ומונחים עובדתיים נשארים כפי שהם במקורות: אל תחליף מונח במונח בעל גוון פוליטי או רגשי שונה, ואל תוסיף שם פרטי, תואר או תפקיד שלא כתובים שם.
 - אל תזכיר את שמות האתרים, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
 - החזר רק את טקסט הסיכום.`;
@@ -43,6 +45,16 @@ const PROMPT_SINGLE = `אתה עורך חדשות. לפניך כותרת ותק�
 - השתמש רק במידע שמופיע בטקסט שלמטה. אל תוסיף שמות, מספרים, תאריכים או סיבות שלא כתובים שם.
 - אל תזכיר את שם האתר, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
 - החזר רק את טקסט הסיכום.`;
+
+// Bump when prompts or checks change: events whose summary failed under older rules get another try.
+const RULES_VERSION = 2;
+
+// What to tell the model when its previous attempt failed a check (in Hebrew, and actionable).
+const HINT = (why, single) =>
+  /copies|too close/.test(why) ? `הטקסט היה קרוב מדי לניסוח המקור${single ? '' : ', כנראה בגלל ציטוט ארוך'}. נסח מחדש במילים אחרות ומסור ציטוטים בלשון עקיפה`
+  : /numbers/.test(why) ? 'הופיעו מספרים שלא כתובים במקורות. השתמש רק במספרים שמופיעים בטקסט, ובאותה צורת כתיבה'
+  : /length/.test(why) ? 'האורך לא התאים. כתוב 2 עד 3 משפטים מלאים'
+  : 'התשובה לא הייתה סיכום בעברית';
 
 const pacificDay = (ms = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: DAY_TZ }).format(ms);
 const words = s => cleanTitle(s).split(' ').filter(Boolean);
@@ -104,15 +116,20 @@ export class Summarizer {
     this.minute = new Map();  // model -> timestamps of calls in the last minute
     this.exhausted = new Map(); // model -> Pacific day on which it hit a quota
     this.lastError = null;
+    this.rejections = [];     // last summaries that failed the checks on every model, with the reason
   }
 
   get enabled() { return !!this.apiKey; }
 
-  toJSON() { return { usage: this.usage, exhausted: Object.fromEntries(this.exhausted), lastError: this.lastError, models: this.models?.map(m => m.name) ?? null }; }
+  toJSON() {
+    return { usage: this.usage, exhausted: Object.fromEntries(this.exhausted), lastError: this.lastError,
+      models: this.models?.map(m => m.name) ?? null, rejections: this.rejections };
+  }
   load(json) {
     if (!json) return;
     if (json.usage?.day === pacificDay()) this.usage = json.usage;
     this.exhausted = new Map(Object.entries(json.exhausted ?? {}).filter(([, d]) => d === pacificDay()));
+    this.rejections = json.rejections ?? [];
   }
 
   async discoverModels() {
@@ -178,7 +195,7 @@ export class Summarizer {
     const todo = events.filter(ev => {
       const n = new Set(ev.articles.map(a => a.sourceId)).size;
       // (a summary that failed the checks is retried only when another source joins)
-      if ((ev.summary && ev.summary.sourceCount >= n) || ev.summaryTried === n) return false;
+      if ((ev.summary && ev.summary.sourceCount >= n) || (ev.summaryTried === n && ev.summaryRules === RULES_VERSION)) return false;
       if (!isSingle(ev)) return true;
       // A hot story is summarized only if the site gave a teaser with real content — rewording a bare
       // headline adds nothing.
@@ -195,23 +212,38 @@ export class Summarizer {
       const userText = sources.map((s, i) => `${single ? 'ידיעה' : 'מקור'} ${i + 1}:\nכותרת: ${s.title}${s.teaser ? `\nתקציר: ${s.teaser}` : ''}`).join('\n\n');
       const sourceTexts = sources.flatMap(s => [s.title, s.teaser].filter(Boolean));
       const sourceCount = new Set(ev.articles.map(a => a.sourceId)).size;
+      // Up to three models get a go (each with one retry that spells out why the first try failed).
+      // A different model often words things differently enough to pass where the first one did not.
+      let lastWhy = null, modelsTried = 0;
       for (const m of this.models) {
+        if (modelsTried >= 3) break;
         if (!this.canUse(m, Date.now())) continue;
+        modelsTried++;
         try {
           let text = await this.generate(m, userText, prompt);
           let why = checkSummary(text, sourceTexts, { single });
-          if (why && this.canUse(m, Date.now())) { // one retry, with the reason spelled out
-            text = await this.generate(m, `${userText}\n\nהערה: הניסיון הקודם נפסל (${why}). הקפד על הכללים${single ? ', ונסח רחוק יותר מהמקור' : ''}.`, prompt);
+          if (why && this.canUse(m, Date.now())) {
+            text = await this.generate(m, `${userText}\n\nהערה: הניסיון הקודם נפסל (${HINT(why, single)}). הקפד על הכללים.`, prompt);
             why = checkSummary(text, sourceTexts, { single });
           }
-          if (why) { rejected++; ev.summaryTried = sourceCount; this.log.info?.(`[summarizer] rejected (${why}): ${ev.articles[0].title.slice(0, 50)}`); break; }
+          if (why) { lastWhy = `${m.name.replace('models/', '')}: ${why}`; continue; }
           ev.summary = { text, model: m.name.replace('models/', ''), at: Date.now(), sourceCount, ...(single && { single: true }) };
+          delete ev.summaryTried;
+          lastWhy = null;
           done++;
           break;
         } catch (e) {
           this.lastError = e.message;
           this.log.error(`[summarizer] ${e.message}`);
         }
+      }
+      if (lastWhy && !ev.summary) {
+        rejected++;
+        ev.summaryTried = sourceCount;
+        ev.summaryRules = RULES_VERSION;
+        this.rejections.unshift({ at: Date.now(), title: ev.articles[0].title.slice(0, 70), single, why: lastWhy });
+        this.rejections.length = Math.min(this.rejections.length, 30);
+        this.log.info?.(`[summarizer] rejected (${lastWhy}): ${ev.articles[0].title.slice(0, 50)}`);
       }
     }
     return { done, rejected, pending: Math.max(0, todo.length - done - rejected) };

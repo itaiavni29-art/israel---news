@@ -19,7 +19,8 @@ import { isHebrew, cleanTitle } from './text.js';
 import { LexicalIndex } from './lexical.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0 }) {
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0, hotNeedsTeaser = false }) {
+    this.hotNeedsTeaser = hotNeedsTeaser; // pick single-source "hot" stories only if they can be summarized
     // Events that share a story keyword ("פליי דובאי") merge at this lower average similarity. 0 = off.
     this.storyMergeThreshold = storyMergeThreshold;
     // Hebrew pairs that share no rare word (name, company, place) must be this much more similar.
@@ -144,6 +145,9 @@ export class EventStore {
     for (const members of clusters) {
       const newest = Math.max(...members.map(m => m.publishedAt ?? 0));
       if (now - newest > HOUR) continue;
+      // With AI summaries on, only stories that came with a real teaser qualify: a bare headline
+      // (e.g. a one-line news flash) leaves nothing to summarize, and every card should have a summary.
+      if (this.hotNeedsTeaser && !members.some(m => (m.teaser ?? '').split(' ').length >= 12)) continue;
       const reasons = [];
       let score = 1 - (now - newest) / HOUR;
       if (members.length > 1) { score += 2 * (members.length - 1); reasons.push('several-articles'); }

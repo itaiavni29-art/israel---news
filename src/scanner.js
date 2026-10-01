@@ -44,6 +44,8 @@ export class Scanner {
       eventMergeThreshold: config.eventMergeThreshold,
       noSharedNamePenalty: config.noSharedNamePenalty,
       storyMergeThreshold: config.storyMergeThreshold,
+      // When hot stories get AI summaries, choose only ones that came with a teaser to summarize.
+      hotNeedsTeaser: this.summarizer.enabled && !!config.summaries?.singleSource,
     });
     this.pool = new Map(); // key -> article seen in the last articleMaxAgeHours
     this.sourcesById = Object.fromEntries(config.sources.map(s => [s.id, s]));
