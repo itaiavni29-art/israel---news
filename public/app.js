@@ -1,7 +1,7 @@
-// כאן ועכשיו — client. Plain DOM (no framework); all text goes through textContent (no HTML injection).
+// זמן אמת — client. Plain DOM (no framework); all text goes through textContent (no HTML injection).
 // Screens follow the Figma file "אפליקציית חדשות": בית · אירוע (כתבה) · מבזקים · נושאים · שמורים.
 const app = document.getElementById('app');
-const BRAND = 'כאן ועכשיו';
+const BRAND = 'זמן אמת';
 const TAGLINE = 'חדשות שקורות עכשיו';
 const NEW_MS = 10 * 60_000;
 

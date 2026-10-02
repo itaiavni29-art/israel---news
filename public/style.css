@@ -1,4 +1,4 @@
-/* כאן ועכשיו — visual design from the Figma file "אפליקציית חדשות" (5 mobile screens, 390px wide). */
+/* זמן אמת — visual design from the Figma file "אפליקציית חדשות" (5 mobile screens, 390px wide). */
 :root {
   --bg: #f5f2eb;
   --surface: #ffffff;
@@ -62,7 +62,7 @@ h1, h2, h3, p { margin: 0; }
   width: 44px; height: 44px; margin: 0 -4px; border: 0; border-radius: 999px; background: transparent;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; color: var(--ink);
 }
-.icon-btn:hover { background: rgba(23, 25, 24, .06); }
+@media (hover: hover) { .icon-btn:hover { background: rgba(23, 25, 24, .06); } }
 .icon-btn:focus-visible, .tab:focus-visible, .nav-item:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
 .brand-mark { width: 26px; height: 26px; display: block; }
@@ -70,7 +70,7 @@ h1, h2, h3, p { margin: 0; }
 .screen-title { font-size: 15px; font-weight: 700; }
 .app-header.dark { background: var(--night); border-bottom-color: rgba(255, 255, 255, .16); color: #fff; }
 .app-header.dark .icon-btn { color: #fff; }
-.app-header.dark .icon-btn:hover { background: rgba(255, 255, 255, .1); }
+@media (hover: hover) { .app-header.dark .icon-btn:hover { background: rgba(255, 255, 255, .1); } }
 
 /* ---------- Live strip (42px, dark) ---------- */
 .live-strip {
@@ -121,7 +121,6 @@ h1, h2, h3, p { margin: 0; }
 .lead .badge { align-self: flex-start; }
 .lead h2 { font-size: 26px; font-weight: 700; line-height: 1.16; }
 .lead .summary { font-size: 12px; line-height: 1.35; color: rgba(255, 255, 255, .85); }
-.lead:hover h2 { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
 
 /* ---------- Compact story rows ---------- */
 .stories { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -129,7 +128,6 @@ h1, h2, h3, p { margin: 0; }
 .story { display: flex; align-items: center; gap: 12px; min-height: 104px; padding: 10px 0; text-decoration: none; color: inherit; }
 .story .copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .story h3 { font-size: 17px; font-weight: 700; line-height: 1.25; }
-.story:hover h3 { text-decoration: underline; text-underline-offset: 3px; }
 .story .meta { color: var(--faint); font-size: 12px; }
 .story .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 /* Where the design has a photo thumbnail we show how widely the story is covered. */
@@ -198,7 +196,6 @@ h1, h2, h3, p { margin: 0; }
 .headline-list .src { display: block; margin-bottom: 2px; }
 .headline-list p { font-size: 15px; line-height: 1.65; }
 .open-link { display: inline-flex; align-items: center; min-height: 32px; color: var(--brand); font-size: 13px; font-weight: 700; text-decoration: none; }
-.open-link:hover { text-decoration: underline; }
 
 /* ---------- Live updates timeline ---------- */
 .night-card { background: var(--night); color: #fff; border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
@@ -220,7 +217,6 @@ h1, h2, h3, p { margin: 0; }
 .tl-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--brand); }
 .tl-body h3 { font-size: 17px; font-weight: 700; line-height: 1.32; }
 .tl-body h3 a { text-decoration: none; }
-.tl-body h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .tl-body .detail { color: var(--muted); font-size: 13px; line-height: 1.45; }
 
 /* ---------- Topics ---------- */
@@ -249,7 +245,6 @@ h1, h2, h3, p { margin: 0; }
 .topic-tile .name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; }
 .topic-tile .name::after { content: ""; order: -1; width: 4px; height: 22px; background: rgba(255, 255, 255, .85); }
 .topic-tile .count { font-size: 12px; color: rgba(255, 255, 255, .76); }
-.topic-tile:hover .name { text-decoration: underline; text-underline-offset: 3px; }
 .list-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 8px 0; font-size: 13px; font-weight: 700; text-decoration: none; color: var(--ink); border: 0; background: none; width: 100%; cursor: pointer; }
 .list-link .label { display: inline-flex; align-items: center; gap: 8px; }
 .list-link .icon { width: 17px; height: 17px; }
@@ -320,5 +315,8 @@ a, button, input, .story, .lead, .topic-tile, .chip { touch-action: manipulation
 
 /* Small "קרא עוד" beside each story (replaces the coverage box) */
 .read-more { flex: none; color: var(--brand); font-size: 12px; font-weight: 700; white-space: nowrap; padding: 8px 0; }
-.story:hover .read-more { text-decoration: underline; text-underline-offset: 3px; }
 .story { min-height: 0; padding: 14px 0; }
+
+/* No hover/touch decoration on headlines: nothing changes until a story is actually tapped. */
+a, button { -webkit-tap-highlight-color: transparent; }
+.story h3, .lead h2, .tl-body h3 a, .topic-tile .name, .read-more, .open-link { text-decoration: none; }

@@ -1,4 +1,4 @@
-// Draws the "כאן ועכשיו" app icon (dark square, two white corner marks framing a red dot) as PNG files.
+// Draws the "זמן אמת" app icon (dark square, two white corner marks framing a red dot) as PNG files.
 // iPhone "Add to Home Screen" needs a PNG (apple-touch-icon); it rounds the corners itself, so the
 // icon is drawn full-bleed. No image library needed: shapes are rasterized here and encoded with zlib.
 //   node scripts/make-icons.js
