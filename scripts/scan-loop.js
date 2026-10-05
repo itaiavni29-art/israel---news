@@ -23,6 +23,9 @@ function publish() {
   if (!repo || !token) return; // local run: nothing to publish
   try {
     fs.rmSync(path.join(dir, '.git'), { recursive: true, force: true });
+    // The site is also hosted on Vercel, linked to this repository: tell it not to build the data branch,
+    // otherwise every scan would use up one of the free plan's daily deployments.
+    fs.writeFileSync(path.join(dir, 'vercel.json'), JSON.stringify({ git: { deploymentEnabled: false } }));
     git('init', '-q', '-b', 'data');
     git('add', '-A');
     git('-c', 'user.name=github-actions[bot]', '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
