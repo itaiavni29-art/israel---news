@@ -3,3 +3,6 @@ models/
 data/
 public/events.json
 public/status.json
+
+.vercel
+.env*
