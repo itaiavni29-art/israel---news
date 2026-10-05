@@ -15,8 +15,12 @@ let data = null; // last events.json
 // that commit id — a URL that can never be stale. Unauthenticated API calls are limited to 60/hour per
 // visitor, but a conditional request answered with 304 ("not changed") does not count, so we can check
 // every 30 seconds and download only when a new scan was published.
-const PAGES = location.hostname.endsWith('.github.io');
-const REPO = PAGES ? `${location.hostname.split('.')[0]}/${location.pathname.split('/')[1]}` : null;
+// Any other public host (e.g. Vercel) serves only the page itself and reads the same `data` branch.
+const LOCAL = ['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
+const PAGES = !LOCAL;
+const REPO = location.hostname.endsWith('.github.io')
+  ? `${location.hostname.split('.')[0]}/${location.pathname.split('/')[1]}`
+  : 'itaiavni29-art/israel---news';
 const REFRESH_MS = 30_000;
 let dataRef = 'data';
 let refEtag = null;
