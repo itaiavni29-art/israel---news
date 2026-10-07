@@ -19,7 +19,8 @@ import { isHebrew, cleanTitle } from './text.js';
 import { LexicalIndex } from './lexical.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0, hotNeedsTeaser = false }) {
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0, hotNeedsTeaser = false, noHotSources = [] }) {
+    this.noHotSources = new Set(noHotSources); // sources that never appear alone as a "hot" story
     this.hotNeedsTeaser = hotNeedsTeaser; // pick single-source "hot" stories only if they can be summarized
     // Events that share a story keyword ("פליי דובאי") merge at this lower average similarity. 0 = off.
     this.storyMergeThreshold = storyMergeThreshold;
@@ -145,6 +146,7 @@ export class EventStore {
     for (const members of clusters) {
       const newest = Math.max(...members.map(m => m.publishedAt ?? 0));
       if (now - newest > HOUR) continue;
+      if (members.some(m => this.noHotSources.has(m.sourceId))) continue;
       // With AI summaries on, only stories that came with a real teaser qualify: a bare headline
       // (e.g. a one-line news flash) leaves nothing to summarize, and every card should have a summary.
       if (this.hotNeedsTeaser && !members.some(m => (m.teaser ?? '').split(' ').length >= 12)) continue;

@@ -146,6 +146,15 @@ test('a hot single-source story becomes a normal event (moved to the top) when a
   assert.equal(ev.detectedAt, T0 + 12 * MIN);
 });
 
+test('a source marked "hot": false never appears alone as a hot story, but still forms normal events', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ singleSourceFallbackMs: 10 * MIN, noHotSources: ['kikar'] });
+  const k = { ...art('kikar', 96), publishedAt: T0 };
+  assert.equal(s.update([k], T0 + 10 * MIN).single, null);
+  const r = s.update([k, { ...art('ynet', 96), publishedAt: T0 }], T0 + 12 * MIN);
+  assert.equal(r.created.length, 1);
+});
+
 test('hottest: a story the site wrote several articles on beats a lone newer headline', () => {
   const MIN = 60_000, T0 = Date.now();
   const s = store({ singleSourceFallbackMs: 10 * MIN });

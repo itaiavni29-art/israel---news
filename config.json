@@ -166,6 +166,16 @@
       ]
     },
     {
+      "id": "kikar",
+      "name": "כיכר השבת",
+      "color": "#0b6e99",
+      "enabled": true,
+      "hot": false,
+      "feeds": ["https://www.kikar.co.il/feed"],
+      "includeUrlPatterns": ["kikar\\.co\\.il/(news|israel-news|world-news|security-news|political-news|arab-news|law-and-order|laws|health-news|economy-news|haredim|haredim-news)/"],
+      "excludeTitlePatterns": ["כיכר FM", "מבזק חדשות", "צפו$"]
+    },
+    {
       "id": "jpost",
       "name": "Jerusalem Post",
       "color": "#2d6a4f",
