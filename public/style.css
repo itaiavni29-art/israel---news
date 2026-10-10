@@ -280,6 +280,37 @@ h1, h2, h3, p { margin: 0; }
 .sheet a { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 4px; font-size: 15px; font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--line); }
 .sheet a .icon { color: var(--brand); }
 .sheet .about { color: var(--muted); font-size: 13px; line-height: 1.5; padding-top: 12px; }
+/* "Add to home screen" guide: a card that rises from the bottom */
+.guide {
+  position: fixed; z-index: 41; left: 50%; bottom: 0; transform: translateX(-50%); width: min(520px, 100vw); max-height: 92dvh; overflow-y: auto;
+  background: var(--bg); border-radius: 20px 20px 0 0; padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 30px rgba(0, 0, 0, .25);
+  display: flex; flex-direction: column; gap: 12px; animation: guide-in .28s ease-out;
+}
+@keyframes guide-in { from { transform: translate(-50%, 40px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .guide { animation: none; } }
+.guide-head { display: flex; align-items: center; gap: 12px; }
+.guide-head .guide-art { width: 64px; flex: none; }
+.guide-head > div:nth-child(2) { flex: 1; }
+.guide-head h2 { margin: 0; font-size: 20px; line-height: 1.25; }
+.guide-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.guide .tabs { justify-content: center; gap: 12px; }
+.guide .tab { font-size: 15px; width: 110px; min-height: 40px; justify-content: flex-end; }
+.guide-body { display: flex; flex-direction: column; gap: 10px; }
+.guide-art svg { display: block; width: 100%; height: auto; }
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.guide-steps li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px; }
+.guide-steps .guide-art { width: 132px; flex: none; background: var(--bg); border-radius: var(--radius-md); }
+.guide-steps h3 { margin: 0; font-size: 15px; line-height: 1.3; display: flex; align-items: center; gap: 8px; }
+.guide-steps .num { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--live); color: #fff; font-size: 13px; display: grid; place-items: center; }
+.guide-steps p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.guide-note { margin: 0; color: var(--faint); font-size: 12px; text-align: center; }
+.guide-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-btn { flex: 1 1 130px; min-height: 48px; border-radius: 999px; border: 1px solid var(--rail); background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.guide-btn.primary { background: var(--night); border-color: var(--night); color: #fff; }
+.guide-btn.one-tap { flex-basis: 100%; background: var(--live); border-color: var(--live); }
+.guide-btn[hidden] { display: none; }
+@media (max-width: 360px) { .guide-steps .guide-art { width: 104px; } }
+
 .toast { position: fixed; z-index: 50; bottom: calc(var(--nav-h) + 16px); left: 50%; transform: translateX(-50%); background: var(--night); color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 
 @media (max-width: 360px) { :root { --gutter: 16px; } .brand-name { font-size: 22px; } .tile { width: 92px; } }

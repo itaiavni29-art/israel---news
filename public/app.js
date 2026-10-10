@@ -461,10 +461,116 @@ function openMenu() {
       el('a', { class: 'brand', href: '#/', onclick: close, style: 'border:0' }, brandMark(), el('span', { class: 'brand-name', style: 'font-size:20px' }, BRAND)),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     link('#/', 'house', 'בית'), link('#/live', 'radio', 'מבזקים'), link('#/topics', 'grid', 'נושאים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
+    !isInstalled() && el('a', { href: '#', onclick: e => { e.preventDefault(); close(); openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));
   document.body.append(backdrop, sheet);
   document.addEventListener('keydown', onKey);
   sheet.querySelector('a')?.focus();
+}
+
+// ---------- "add to home screen" guide ----------
+// Shown on phones on the 1st, 4th, 7th… visit (a visit = a browser session), never inside the installed
+// app, and never again after "אל תציג שוב". Always reachable from the menu.
+const A2HS = 'in:a2hs';
+const a2hs = {
+  get() { try { return JSON.parse(localStorage.getItem(A2HS)) ?? {}; } catch { return {}; } },
+  set(v) { try { localStorage.setItem(A2HS, JSON.stringify(v)); } catch { /* private mode */ } },
+};
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(navigator.userAgent);
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installPrompt = null; // Android Chrome hands us its own install dialog when the site qualifies
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; document.querySelector('.guide .one-tap')?.removeAttribute('hidden'); });
+
+// Drawings for the steps: schematic, drawn here (not screenshots of anyone's interface).
+const art = body => { const d = el('div', { class: 'guide-art', 'aria-hidden': 'true' }); d.innerHTML = `<svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg" font-family="Arimo, Arial, sans-serif">${body}</svg>`; return d; };
+const SHARE = (x, y) => `<g transform="translate(${x} ${y})" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M-7 -2v11h14v-11"/><path d="M0 3v-15"/><path d="M-5 -8l5 -5 5 5"/></g>`;
+const RING = (x, y, r = 17) => `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2.5"/>`;
+const APP = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-17" y="-17" width="34" height="34" rx="8" fill="#0e1317"/><path d="M-7 -1v-6h6M7 1v6h-6" fill="none" stroke="#fff" stroke-width="2.2"/><circle r="2" fill="#e0282e"/></g>`;
+const ROW = (y, label, on) => `<rect x="34" y="${y}" width="172" height="24" rx="7" fill="${on ? 'var(--live-soft)' : 'var(--surface)'}" stroke="${on ? 'var(--live)' : 'var(--line)'}" stroke-width="${on ? 2.5 : 1}"/>` +
+  (label ? `<text x="196" y="${y + 16.5}" text-anchor="start" direction="rtl" font-size="11.5" font-weight="700" fill="var(--ink)">${label}</text>` : `<rect x="110" y="${y + 9}" width="84" height="6" rx="3" fill="var(--line)"/>`);
+const ART = {
+  iosShare: art(`<rect x="20" y="62" width="200" height="44" rx="22" fill="var(--surface)" stroke="var(--line)"/><rect x="74" y="74" width="92" height="20" rx="10" fill="var(--bg)"/><rect x="92" y="81" width="56" height="6" rx="3" fill="var(--line)"/>
+    ${RING(46, 84)}<g fill="var(--ink)"><circle cx="39" cy="84" r="2.4"/><circle cx="46" cy="84" r="2.4"/><circle cx="53" cy="84" r="2.4"/></g>
+    <path d="M46 62V40h52" fill="none" stroke="var(--live)" stroke-width="2" stroke-dasharray="4 4"/><rect x="100" y="16" width="112" height="34" rx="10" fill="var(--surface)" stroke="var(--line)"/>${SHARE(190, 35)}<text x="174" y="38" text-anchor="start" direction="rtl" font-size="12.5" font-weight="700" fill="var(--ink)">שיתוף</text>`),
+  iosRow: art(`<rect x="24" y="6" width="192" height="114" rx="14" fill="var(--bg)" stroke="var(--line)"/>${ROW(16, '')}${ROW(46, 'הוסף למסך הבית', true)}${ROW(76, '')}
+    <g transform="translate(50 58)" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"><rect x="-8" y="-8" width="16" height="16" rx="4"/><path d="M0 -4v8M-4 0h8"/></g>`),
+  iosAdd: art(`<rect x="24" y="8" width="192" height="104" rx="14" fill="var(--surface)" stroke="var(--line)"/>${APP(180, 62)}<text x="154" y="59" text-anchor="start" direction="rtl" font-size="13" font-weight="700" fill="var(--ink)">זמן אמת</text><rect x="74" y="66" width="80" height="6" rx="3" fill="var(--line)"/>
+    <rect x="34" y="18" width="58" height="26" rx="13" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2.5"/><text x="63" y="35.5" text-anchor="middle" direction="rtl" font-size="12.5" font-weight="700" fill="var(--brand)">הוסף</text>`),
+  andMenu: art(`<rect x="20" y="20" width="200" height="44" rx="12" fill="var(--surface)" stroke="var(--line)"/><rect x="68" y="32" width="136" height="20" rx="10" fill="var(--bg)"/><rect x="118" y="39" width="72" height="6" rx="3" fill="var(--line)"/>
+    ${RING(44, 42)}<g fill="var(--ink)"><circle cx="44" cy="35" r="2.4"/><circle cx="44" cy="42" r="2.4"/><circle cx="44" cy="49" r="2.4"/></g>
+    <rect x="20" y="76" width="200" height="8" rx="4" fill="var(--line)"/><rect x="60" y="94" width="160" height="8" rx="4" fill="var(--line)"/>`),
+  andRow: art(`<rect x="24" y="6" width="192" height="114" rx="14" fill="var(--bg)" stroke="var(--line)"/>${ROW(16, '')}${ROW(46, 'הוספה למסך הבית', true)}${ROW(76, '')}
+    <g transform="translate(50 58)" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="-6" y="-9" width="12" height="18" rx="3"/><path d="M0 -3v6M-3 0h6"/></g>`),
+  andAdd: art(`<rect x="24" y="8" width="192" height="104" rx="14" fill="var(--surface)" stroke="var(--line)"/>${APP(180, 44)}<text x="154" y="49" text-anchor="start" direction="rtl" font-size="13" font-weight="700" fill="var(--ink)">זמן אמת</text>
+    <rect x="34" y="74" width="72" height="28" rx="14" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2.5"/><text x="70" y="92.5" text-anchor="middle" direction="rtl" font-size="12.5" font-weight="700" fill="var(--brand)">התקנה</text><text x="150" y="92.5" text-anchor="middle" direction="rtl" font-size="12" fill="var(--muted)">ביטול</text>`),
+  home: () => art(`<rect x="60" y="4" width="120" height="116" rx="16" fill="var(--night)"/>${[0, 1, 2].map(r => [0, 1, 2].map(c => (r === 1 && c === 1 ? RING(120, 62, 21) + APP(120, 62, .9) : `<rect x="${82 + c * 30}" y="${22 + r * 30}" width="20" height="20" rx="6" fill="rgba(255,255,255,.18)"/>`)).join('')).join('')}`),
+};
+const GUIDE = {
+  ios: {
+    label: 'אייפון',
+    note: 'ב-Safari. הכפתורים יכולים להיראות קצת אחרת לפי גרסת האייפון.',
+    steps: [
+      [ART.iosShare, 'פותחים את תפריט השיתוף', 'לוחצים על שלוש הנקודות ⋯ ליד שורת הכתובת ואז על "שיתוף". בגרסאות קודמות כפתור השיתוף (ריבוע עם חץ למעלה) נמצא ישר בסרגל התחתון.'],
+      [ART.iosRow, 'בוחרים "הוסף למסך הבית"', 'גוללים מטה ברשימה עד שמוצאים את האפשרות.'],
+      [ART.iosAdd, 'לוחצים "הוסף"', 'הסמל של זמן אמת יופיע במסך הבית וייפתח כמו אפליקציה, במסך מלא.'],
+    ],
+  },
+  android: {
+    label: 'אנדרואיד',
+    note: 'ב-Chrome. בדפדפנים אחרים האפשרות נמצאת בתפריט הראשי בשם דומה.',
+    steps: [
+      [ART.andMenu, 'פותחים את התפריט', 'לוחצים על שלוש הנקודות ⋮ בפינה העליונה של הדפדפן.'],
+      [ART.andRow, 'בוחרים "הוספה למסך הבית"', 'לפעמים האפשרות נקראת "התקנת האפליקציה".'],
+      [ART.andAdd, 'מאשרים ב"התקנה"', 'הסמל של זמן אמת יופיע במסך הבית וייפתח כמו אפליקציה, במסך מלא.'],
+    ],
+  },
+};
+
+function openInstallGuide() {
+  if (document.querySelector('.guide')) return;
+  let platform = isAndroid ? 'android' : 'ios';
+  const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  const never = () => { a2hs.set({ ...a2hs.get(), never: true }); close(); };
+  const body = el('div', { class: 'guide-body' });
+  const tabs = el('div', { class: 'tabs', role: 'tablist' });
+  const draw = () => {
+    const g = GUIDE[platform];
+    tabs.replaceChildren(...Object.entries(GUIDE).map(([key, v]) =>
+      el('button', { class: 'tab', type: 'button', role: 'tab', 'aria-selected': String(key === platform), onclick: () => { platform = key; draw(); } }, v.label)));
+    body.replaceChildren(
+      el('ol', { class: 'guide-steps' }, ...g.steps.map(([pic, title, text], i) =>
+        el('li', {}, pic, el('div', {}, el('h3', {}, el('span', { class: 'num' }, String(i + 1)), title), el('p', {}, text))))),
+      el('p', { class: 'guide-note' }, g.note));
+  };
+  const oneTap = el('button', { class: 'guide-btn primary one-tap', type: 'button', hidden: !installPrompt, onclick: async () => { const p = installPrompt; installPrompt = null; close(); p?.prompt(); } }, 'התקנה בלחיצה אחת');
+  const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
+  const box = el('section', { class: 'guide', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'guide-title' },
+    el('div', { class: 'guide-head' },
+      ART.home(),
+      el('div', {}, el('h2', { id: 'guide-title' }, `${BRAND} במסך הבית`), el('p', {}, 'שלושה צעדים, והאתר נפתח כמו אפליקציה: סמל במסך הבית ומסך מלא.')),
+      el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
+    tabs, body,
+    el('div', { class: 'guide-actions' },
+      oneTap,
+      el('button', { class: 'guide-btn primary', type: 'button', onclick: close }, 'הבנתי'),
+      el('button', { class: 'guide-btn', type: 'button', onclick: never }, 'אל תציג שוב')));
+  draw();
+  document.body.append(backdrop, box);
+  document.addEventListener('keydown', onKey);
+}
+
+function maybeInstallGuide() {
+  if (!(isIOS || isAndroid) || isInstalled()) return;
+  const s = a2hs.get();
+  if (s.never) return;
+  let counted = false;
+  try { counted = sessionStorage.getItem(A2HS) === '1'; sessionStorage.setItem(A2HS, '1'); } catch { /* private mode */ }
+  if (counted) return; // a reload inside the same visit
+  s.visits = (s.visits ?? 0) + 1;
+  a2hs.set(s);
+  if (s.visits % 3 === 1) openInstallGuide();
 }
 
 // ---------- router ----------
@@ -539,6 +645,7 @@ async function checkAppVersion() {
 // Pull new events automatically: every 30 s, and right away when the page comes back into view
 // (switching tabs, unlocking the phone, reopening the home-screen app, reconnecting).
 await route();
+maybeInstallGuide();
 checkAppVersion();
 setInterval(tick, REFRESH_MS);
 setInterval(checkAppVersion, 10 * 60_000);
