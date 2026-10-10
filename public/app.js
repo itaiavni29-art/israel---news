@@ -461,7 +461,7 @@ function openMenu() {
       el('a', { class: 'brand', href: '#/', onclick: close, style: 'border:0' }, brandMark(), el('span', { class: 'brand-name', style: 'font-size:20px' }, BRAND)),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     link('#/', 'house', 'בית'), link('#/live', 'radio', 'מבזקים'), link('#/topics', 'grid', 'נושאים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
-    !isInstalled() && el('a', { href: '#', onclick: e => { e.preventDefault(); close(); openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
+    el('a', { href: '#', onclick: e => { e.preventDefault(); close(); openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));
   document.body.append(backdrop, sheet);
   document.addEventListener('keydown', onKey);
