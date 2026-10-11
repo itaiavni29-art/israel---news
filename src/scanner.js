@@ -47,6 +47,8 @@ export class Scanner {
       // When hot stories get AI summaries, choose only ones that came with a teaser to summarize.
       hotNeedsTeaser: this.summarizer.enabled && !!config.summaries?.singleSource,
       noHotSources: config.sources.filter(s => s.hot === false).map(s => s.id),
+      leadMinSources: config.leadMinSources ?? 0,
+      leadHoldMs: (config.leadHoldMinutes ?? 0) * 60_000,
     });
     this.pool = new Map(); // key -> article seen in the last articleMaxAgeHours
     this.sourcesById = Object.fromEntries(config.sources.map(s => [s.id, s]));
@@ -138,6 +140,7 @@ export class Scanner {
     const item = a => ({ sourceId: a.sourceId, sourceName: src(a.sourceId).name, color: src(a.sourceId).color,
       title: a.title, link: a.link, publishedAt: a.publishedAt, category: categoryInfo(a.category) });
     const pool = [...this.pool.values()].sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
+    const lead = this.store.leadEvent();
     // Events saved before images were read from the feeds: take the photo from the current feed item.
     for (const ev of this.store.active) for (const a of ev.articles) if (!a.image && this.pool.get(a.key)?.image) a.image = this.pool.get(a.key).image;
     return {
@@ -151,8 +154,10 @@ export class Scanner {
       showPhotos: !!this.config.showPhotos,
       // Summaries are generated and published first, and shown in the app only once they were reviewed.
       showSummaries: !!this.config.summaries?.showOnSite,
-      events: this.store.active.map(ev => {
+      // the leading story first (a big story keeps the top of the page for a while), then newest first
+      events: [lead, ...this.store.active.filter(ev => ev !== lead)].filter(Boolean).map(ev => {
         const e = { ...presentEvent(ev, this.sourcesById), category: categoryInfo(eventCategory(ev.articles)) };
+        if (ev === lead) e.lead = { since: ev.bigAt, until: ev.bigAt + this.store.leadHoldMs };
         if (!this.config.showPhotos) e.image = null;
         e.summary = ev.summary ? { text: ev.summary.text, model: ev.summary.model, at: ev.summary.at, single: !!ev.summary.single } : null;
         return e;

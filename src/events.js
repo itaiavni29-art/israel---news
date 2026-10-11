@@ -19,7 +19,10 @@ import { isHebrew, cleanTitle } from './text.js';
 import { LexicalIndex } from './lexical.js';
 
 export class EventStore {
-  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0, hotNeedsTeaser = false, noHotSources = [] }) {
+  constructor({ maxEvents = 10, minSources = 2, similarityThreshold, crossLanguageThreshold, retentionMs = 24 * 3600_000, singleSourceFallbackMs = 0, eventMergeThreshold, noSharedNamePenalty = 0, storyMergeThreshold = 0, hotNeedsTeaser = false, noHotSources = [], leadMinSources = 0, leadHoldMs = 0 }) {
+    // A story covered by at least leadMinSources sites is "big": it leads the list for leadHoldMs from the
+    // moment it became big, and is not pushed out of the list during that time. 0 = off.
+    Object.assign(this, { leadMinSources, leadHoldMs });
     this.noHotSources = new Set(noHotSources); // sources that never appear alone as a "hot" story
     this.hotNeedsTeaser = hotNeedsTeaser; // pick single-source "hot" stories only if they can be summarized
     // Events that share a story keyword ("פליי דובאי") merge at this lower average similarity. 0 = off.
@@ -39,6 +42,18 @@ export class EventStore {
   }
 
   sourceCount(ev) { return new Set(ev.articles.map(a => a.sourceId)).size; }
+
+  isHeld(ev, now) { return !!(this.leadHoldMs && ev.bigAt && now - ev.bigAt < this.leadHoldMs); }
+
+  /**
+   * The story that leads the page: among the big stories still inside their hold time, the one covered by
+   * the most sites (a tie goes to the one that became big first, so the lead does not flip back and forth).
+   * @returns {object|null}
+   */
+  leadEvent(now = Date.now()) {
+    return this.active.filter(ev => this.isHeld(ev, now))
+      .sort((a, b) => this.sourceCount(b) - this.sourceCount(a) || a.bigAt - b.bigAt)[0] ?? null;
+  }
 
   margin(a, b) {
     let th = a.hebrew === b.hebrew ? this.similarityThreshold : this.crossLanguageThreshold;
@@ -119,8 +134,14 @@ export class EventStore {
 
     // 4. Enforce the cap: retire by oldest detection time (ties → the one whose news is stalest).
     this.active.sort((a, b) => b.detectedAt - a.detectedAt || latest(b) - latest(a));
+    // Big stories: note when each one became big; they are held (not retired) while their time runs.
+    if (this.leadMinSources) for (const ev of this.active) if (!ev.bigAt && this.sourceCount(ev) >= this.leadMinSources) ev.bigAt = now;
     while (this.active.length > this.maxEvents) {
-      const ev = this.active.pop();
+      // retire the oldest event that is not being held (if every event is held, the oldest one)
+      let i = this.active.length - 1;
+      while (i > 0 && this.isHeld(this.active[i], now)) i--;
+      if (this.isHeld(this.active[i], now)) i = this.active.length - 1;
+      const [ev] = this.active.splice(i, 1);
       ev.retiredAt = now;
       this.retired.push(ev);
       retired.push(ev);

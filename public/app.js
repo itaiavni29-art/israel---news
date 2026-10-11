@@ -230,7 +230,7 @@ function homeView() {
               el('span', { class: 'count' }, el('b', {}, lead.singleSource ? 'חם' : String(lead.sourceCount)), lead.singleSource ? 'מקור אחד' : 'אתרים מסקרים עכשיו'),
               el('span', { class: 'names' }, lead.sources.map(s => el('i', { style: `--c:${s.color}` }, s.name)))),
             el('span', { class: 'lead-copy' },
-              catLabel(lead.category, 'חדשות'),
+              el('span', { class: 'row' }, catLabel(lead.category, 'חדשות'), lead.lead && el('span', { class: 'badge-new' }, 'הסיפור המרכזי')),
               el('h2', { lang: langOf(lead.title) }, lead.title),
               data?.showSummaries && lead.summary?.text && el('p', { class: 'summary' }, lead.summary.text),
               el('span', { class: 'meta' }, `${sourcesText(lead.sourceCount)} | ${hhmm(lead.detectedAt)} | זוהה ${ago(lead.detectedAt)}`))),

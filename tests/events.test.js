@@ -155,6 +155,21 @@ test('a source marked "hot": false never appears alone as a hot story, but still
   assert.equal(r.created.length, 1);
 });
 
+test('a story covered by many sites leads for two hours and is not pushed out by newer events', () => {
+  const MIN = 60_000, T0 = Date.now();
+  const s = store({ maxEvents: 3, leadMinSources: 4, leadHoldMs: 120 * MIN });
+  const big = ['ynet', 'maariv', 'haaretz', 'globes'].map(src => art(src, 70));
+  s.update(big, T0);
+  assert.equal(s.leadEvent(T0)?.articles.length, 4);
+  // four newer two-source events arrive; the list holds three
+  let pool = [...big];
+  for (let i = 1; i <= 4; i++) { pool = [...pool, art('ynet', 70 + i), art('maariv', 70 + i)]; s.update(pool, T0 + i * 10 * MIN); }
+  assert.equal(s.active.length, 3);
+  assert.ok(s.active.includes(s.leadEvent(T0 + 40 * MIN)), 'the big story is still in the list');
+  assert.equal(s.leadEvent(T0 + 119 * MIN)?.articles[0].title, big[0].title);
+  assert.equal(s.leadEvent(T0 + 121 * MIN), null);            // after two hours it is an ordinary event again
+});
+
 test('hottest: a story the site wrote several articles on beats a lone newer headline', () => {
   const MIN = 60_000, T0 = Date.now();
   const s = store({ singleSourceFallbackMs: 10 * MIN });

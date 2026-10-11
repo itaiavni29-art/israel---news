@@ -218,5 +218,7 @@
         "/food-recipes/"
       ]
     }
-  ]
+  ],
+  "leadMinSources": 4,
+  "leadHoldMinutes": 120
 }
