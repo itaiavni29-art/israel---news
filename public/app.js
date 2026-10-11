@@ -2,7 +2,6 @@
 // Screens follow the Figma file "אפליקציית חדשות": בית · אירוע (כתבה) · מבזקים · נושאים · שמורים.
 const app = document.getElementById('app');
 const BRAND = 'זמן אמת';
-const TAGLINE = 'חדשות שקורות עכשיו';
 const NEW_MS = 10 * 60_000;
 
 let data = null; // last events.json
@@ -90,15 +89,13 @@ function el(tag, attrs = {}, ...children) {
   return n;
 }
 // Brand mark: two corners framing a red dot ("the moment, here and now").
-const brandMark = () => el('img', { class: 'brand-mark', src: 'logo-mark.svg', alt: '', width: 26, height: 26 });
+const brandMark = (src = 'logo-mark-white.svg') => el('img', { class: 'brand-mark', src, alt: '', width: 26, height: 26 });
 const icon = name => el('span', { class: `icon i-${name}`, 'aria-hidden': 'true' });
 const now = () => Date.now();
 const hhmm = ms => new Date(ms).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
 const safeUrl = u => (/^https?:\/\//i.test(u) ? u : '#');
 const langOf = s => (/[א-ת]/.test(s) ? 'he' : 'en');
 const isToday = ms => new Date(ms).toDateString() === new Date().toDateString();
-const dayName = d => new Intl.DateTimeFormat('he-IL', { weekday: 'short', timeZone: 'Asia/Jerusalem' }).format(d);
-const dayMonth = d => new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' }).format(d);
 
 function ago(ms) {
   const m = Math.max(0, Math.round((now() - ms) / 60_000));
@@ -113,14 +110,12 @@ function ago(ms) {
   const d = Math.floor(h / 24);
   return d === 1 ? 'אתמול' : `לפני ${d} ימים`;
 }
-function greeting() {
-  const h = +new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Jerusalem' }).format(new Date());
-  return h < 5 ? 'לילה טוב' : h < 12 ? 'בוקר טוב' : h < 17 ? 'צהריים טובים' : h < 21 ? 'ערב טוב' : 'לילה טוב';
-}
 const sourcesText = n => (n === 1 ? 'מקור אחד' : `${n} מקורות`);
 const joinNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} ו${names.at(-1)}`);
-const catStyle = c => (c ? `--c:${c.color}` : null);
-const catLabel = (c, fallback) => el('span', { class: 'cat', style: catStyle(c) }, c?.name ?? fallback);
+const catLabel = (c, fallback) => el('span', { class: 'cat' }, c?.name ?? fallback);
+const srcLabel = (name, color) => el('span', { class: 'src-tag', style: `--c:${color}` }, name);
+const dayLong = d => new Intl.DateTimeFormat('he-IL', { weekday: 'long', timeZone: 'Asia/Jerusalem' }).format(d);
+const dayNum = d => new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric', timeZone: 'Asia/Jerusalem' }).format(d);
 const hotReasons = { 'several-articles': 'האתר פרסם כמה כתבות', 'near-match-elsewhere': 'כותרת דומה באתר נוסף', breaking: 'מבזק' };
 
 function toast(msg) {
@@ -131,55 +126,46 @@ function toast(msg) {
 }
 
 // ---------- shared pieces ----------
-function header({ title, brand = false, dark = false, back = false, share = null }) {
-  return el('header', { class: `app-header${dark ? ' dark' : ''}` },
-    back
-      ? el('a', { class: 'icon-btn', href: '#/', 'aria-label': 'חזרה', onclick: e => { if (history.length > 1) { e.preventDefault(); history.back(); } } }, icon('back'))
-      : el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'תפריט', onclick: openMenu }, icon('menu')),
-    brand
-      ? el('a', { class: 'brand', href: '#/' }, brandMark(), el('span', { class: 'brand-name' }, BRAND))
-      : el('span', { class: 'screen-title' }, title),
-    share
-      ? el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'שיתוף', onclick: share }, icon('share'))
-      : el('a', { class: 'icon-btn', href: '#/saved', 'aria-label': 'השמורים שלי' }, icon('user')));
+// Blue bar with the logo in the middle. `title` adds a grey bar with the screen's name under it;
+// `textSize` swaps the search button for "א+" (bigger text on the event screen).
+function header({ title = null, back = false, textSize = false } = {}) {
+  return [
+    el('header', { class: 'app-header' },
+      back
+        ? el('a', { class: 'icon-btn', href: '#/', 'aria-label': 'חזרה', onclick: e => { if (history.length > 1) { e.preventDefault(); history.back(); } } }, icon('back'))
+        : el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'תפריט', onclick: openMenu }, icon('menu')),
+      el('a', { class: 'brand', href: '#/', 'aria-label': `${BRAND} — לעמוד הראשי` }, brandMark(), el('span', { class: 'brand-name' }, BRAND)),
+      textSize
+        ? el('button', { class: 'icon-btn text-size', type: 'button', 'aria-label': 'הגדלת הטקסט', 'aria-pressed': String(bigText()), onclick: toggleBigText }, 'א+')
+        : el('a', { class: 'icon-btn', href: '#/topics', 'aria-label': 'חיפוש' }, icon('search'))),
+    title && el('div', { class: 'page-bar' }, el('h1', {}, title)),
+  ];
 }
 
-function updatedLine() {
-  if (!data || data.error) return el('p', { class: 'scan-status' }, 'אין חיבור. ננסה שוב בעוד רגע.');
-  if (!data.lastScanAt) return el('p', { class: 'scan-status' }, 'סורקים את אתרי החדשות בפעם הראשונה…');
-  const stale = now() - data.lastScanAt > 30 * 60_000;
-  return el('p', { class: `scan-status${stale ? ' stale' : ''}` }, `עודכן ${ago(data.lastScanAt)} · מתעדכן אוטומטית`);
+// "א+": larger reading text, remembered on this device.
+const BIG = 'in:big';
+const bigText = () => { try { return localStorage.getItem(BIG) === '1'; } catch { return false; } };
+function toggleBigText() {
+  const on = !bigText();
+  try { localStorage.setItem(BIG, on ? '1' : '0'); } catch { /* private mode */ }
+  document.documentElement.classList.toggle('big-text', on);
+  document.querySelector('.text-size')?.setAttribute('aria-pressed', String(on));
+}
+document.documentElement.classList.toggle('big-text', bigText());
+
+// The row of sections under the header: "ראשי" and the topics found in today's headlines.
+function sectionTabs(active = null) {
+  const link = (href, label, on) => el('a', { href, 'aria-current': on ? 'page' : null }, label);
+  return el('nav', { class: 'sections', 'aria-label': 'מדורים' },
+    link('#/', 'ראשי', active == null), (data?.categories ?? []).map(c => link(`#/topics/${c.id}`, c.name, active === c.id)));
 }
 
-// Where the design shows a photo, we show how widely the story is covered.
-// The event's photo, loaded straight from the source site (as published in its own feed; never copied).
-// If a photo cannot load, the lead/hero fall back to the colored panel and rows to the coverage tile.
-function photo(image, cls) {
-  // Photos are shown only when the published data allows it (showPhotos), so events saved on the device
-  // before photos were turned off do not keep showing them.
-  if (!data?.showPhotos || !image?.url || !/^https:\/\//.test(image.url)) return null;
-  return el('img', {
-    class: cls, src: image.url, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
-    onerror: e => { const box = e.target.closest('[data-has-photo]'); if (box) box.removeAttribute('data-has-photo'); e.target.remove(); },
-  });
+function updatedText() {
+  if (!data || data.error) return 'אין חיבור. ננסה שוב בעוד רגע.';
+  if (!data.lastScanAt) return 'סורקים את אתרי החדשות בפעם הראשונה…';
+  return `עודכן ${ago(data.lastScanAt)} · מתעדכן אוטומטית`;
 }
-const credit = image => (image?.sourceName ? el('span', { class: 'credit' }, `צילום: ${image.sourceName}`) : null);
-
-function thumb(ev, tall = false) {
-  const tile = coverageTile(ev, tall);
-  const img = photo(ev.image, 'thumb-img');
-  if (!img) return tile;
-  const box = el('div', { class: `thumb${tall ? ' tall' : ''}`, 'aria-hidden': 'true' }, img,
-    el('span', { class: `thumb-badge${ev.singleSource ? ' hot' : ''}` }, ev.singleSource ? 'חם' : sourcesText(ev.sourceCount)));
-  img.addEventListener('error', () => box.replaceWith(tile));
-  return box;
-}
-
-// Beside each story (where a photo would be): just a small "קרא עוד". The number of sources is already
-// in the line under the headline, and "חם" has its own badge.
-function coverageTile() {
-  return el('span', { class: 'read-more' }, 'קרא עוד');
-}
+const isStale = () => !data || data.error || (data.lastScanAt && now() - data.lastScanAt > 30 * 60_000);
 
 function coverageText(ev) {
   if (ev.singleSource) {
@@ -207,14 +193,14 @@ function storyRow(ev, { saved = null } = {}) {
       // (a button may not sit inside a link, so "unsave" is a sibling of the story link)
       saved?.removable && el('button', { class: 'unsave', type: 'button', 'aria-label': `הסרה מהשמורים: ${ev.title}`,
         onclick: () => { toggleSave(ev); toast('הוסר מהשמורים'); route({ refresh: false }); } }, icon('saved')),
-      el('a', { href, tabindex: '-1', 'aria-hidden': 'true', style: 'text-decoration:none' }, thumb(ev, !!saved))));
+      el('a', { class: 'read-more', href, tabindex: '-1', 'aria-hidden': 'true' }, 'קרא עוד')));
 }
 
 function headlineRow(h) {
   return el('li', {},
     el('a', { class: 'story', href: safeUrl(h.link), target: '_blank', rel: 'noopener noreferrer', style: 'min-height:0' },
       el('span', { class: 'copy' },
-        el('span', { class: 'row', style: 'justify-content:flex-start;gap:8px' }, catLabel({ name: h.sourceName, color: h.color })),
+        el('span', { class: 'row', style: 'justify-content:flex-start;gap:8px' }, srcLabel(h.sourceName, h.color)),
         el('h3', { lang: langOf(h.title), style: 'font-size:16px' }, h.title),
         el('span', { class: 'meta' }, `${h.category ? h.category.name + ' · ' : ''}${ago(h.publishedAt)} · פתח כתבה ↗`))));
 }
@@ -227,135 +213,113 @@ function homeView() {
   const latestBreaking = data?.breaking?.[0];
   const events = data?.events ?? [];
   const [lead, ...rest] = events;
-  const d = new Date();
   return [
-    header({ brand: true }),
+    header(), sectionTabs(),
     latestBreaking && el('a', { class: 'live-strip', href: '#/live', 'aria-label': `מבזק אחרון: ${latestBreaking.title}` },
-      el('span', { class: 'live-label' }, 'חי'), el('span', { class: 'live-dot', 'aria-hidden': 'true' }),
-      el('span', { class: 'update', lang: langOf(latestBreaking.title) }, latestBreaking.title),
-      el('time', { datetime: new Date(latestBreaking.publishedAt).toISOString() }, hhmm(latestBreaking.publishedAt))),
-    el('main', { class: 'screen', id: 'main' },
-      el('div', { class: 'edition' }, el('h1', {}, greeting()), el('span', { class: 'date' }, `${dayName(d)}, ${dayMonth(d)}`)),
-      el('p', { class: 'tagline' }, TAGLINE),
-      updatedLine(),
+      el('span', { class: 'live-label' }, 'מבזק'),
+      el('time', { datetime: new Date(latestBreaking.publishedAt).toISOString() }, hhmm(latestBreaking.publishedAt)),
+      el('span', { class: 'update', lang: langOf(latestBreaking.title) }, latestBreaking.title)),
+    isStale() && el('p', { class: 'scan-status stale' }, updatedText()),
+    el('main', { class: 'screen home', id: 'main' },
       data?.error && !events.length ? empty('לא הצלחנו לטעון את האירועים.', 'ננסה שוב בעוד דקה.')
         : !lead ? empty(data?.lastScanAt ? 'עדיין לא זוהו אירועים שמסוקרים ביותר ממקור אחד.' : 'סורקים את אתרי החדשות בפעם הראשונה…', 'הדף יתעדכן לבד.')
         : [
-          el('a', { class: 'lead', href: `#/event/${lead.id}`, style: catStyle(lead.category), 'data-has-photo': lead.image ? '' : null },
-            photo(lead.image, 'bg-photo'), credit(lead.image),
-            el('span', { class: 'badge', style: catStyle(lead.category) }, lead.singleSource ? 'חם · מקור אחד' : lead.category?.name ?? 'חדשות'),
-            el('h2', { lang: langOf(lead.title) }, lead.title),
-            el('p', { class: 'summary' }, `${coverageText(lead)} · זוהה ${ago(lead.detectedAt)}`)),
-          rest.length && el('div', { class: 'section-head' }, el('h2', {}, 'עוד בכותרות'), el('a', { class: 'action', href: '#/topics' }, 'לכל הכותרות')),
+          // Where a news site would put its main photo, we show what this app is about: who is covering the story.
+          el('a', { class: 'lead', href: `#/event/${lead.id}` },
+            el('span', { class: 'coverage' },
+              el('span', { class: 'count' }, el('b', {}, lead.singleSource ? 'חם' : String(lead.sourceCount)), lead.singleSource ? 'מקור אחד' : 'אתרים מסקרים עכשיו'),
+              el('span', { class: 'names' }, lead.sources.map(s => el('i', { style: `--c:${s.color}` }, s.name)))),
+            el('span', { class: 'lead-copy' },
+              catLabel(lead.category, 'חדשות'),
+              el('h2', { lang: langOf(lead.title) }, lead.title),
+              data?.showSummaries && lead.summary?.text && el('p', { class: 'summary' }, lead.summary.text),
+              el('span', { class: 'meta' }, `${sourcesText(lead.sourceCount)} | ${hhmm(lead.detectedAt)} | זוהה ${ago(lead.detectedAt)}`))),
+          rest.length && el('div', { class: 'band', 'aria-hidden': 'true' }),
           rest.length && el('ul', { class: 'stories' }, rest.map(ev => storyRow(ev))),
         ],
-      el('p', { class: 'footnote' }, 'האתר לא מעתיק כתבות: רק כותרות וקישורים לאתרים המקוריים.')),
+      el('p', { class: 'footnote' }, `${updatedText()}. האתר לא מעתיק כתבות: רק כותרות וקישורים לאתרים המקוריים.`)),
   ];
 }
 
 function eventView(id, tab) {
   const ev = findEvent(id);
-  if (!ev) return [header({ title: 'אירוע', back: true }), el('main', { class: 'screen' }, empty('האירוע כבר לא ברשימה.', 'ייתכן שהוחלף באירוע חדש יותר.'))];
+  if (!ev) return [header({ back: true }), el('main', { class: 'screen' }, empty('האירוע כבר לא ברשימה.', 'ייתכן שהוחלף באירוע חדש יותר.'))];
   document.title = `${ev.title} · ${BRAND}`;
   remember(ev);
   const bySource = new Map();
   for (const a of ev.articles) bySource.set(a.sourceId, [...(bySource.get(a.sourceId) ?? []), a]);
-  const current = tab === 'sources' ? 'sources' : 'what';
-  const go = key => location.replace(`#/event/${id}${key === 'sources' ? '/sources' : ''}`);
-  const tabBtn = (key, label) => el('button', {
-    class: 'tab', role: 'tab', type: 'button', id: `tab-${key}`, 'aria-controls': `panel-${key}`, 'aria-selected': String(current === key),
-    tabindex: current === key ? '0' : '-1', onclick: () => go(key),
-    onkeydown: e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') go(key === 'sources' ? 'what' : 'sources'); },
-  }, label);
   const share = async () => {
     const payload = { title: ev.title, text: `${ev.title} — ${coverageText(ev)}`, url: location.href };
     try { if (navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(location.href); toast('הקישור הועתק'); } } catch { /* cancelled */ }
   };
   const saved = isSaved(ev.id);
   const live = data?.events.some(e => e.id === ev.id);
-
-  const whatHappened = el('section', { class: 'screen', style: 'padding-top:0', id: 'panel-what', role: 'tabpanel', 'aria-labelledby': 'tab-what' },
-    el('div', { class: 'quote', style: catStyle(ev.category) }, el('p', { lang: langOf(ev.title) }, ev.title)),
-    el('ul', { class: 'headline-list' }, ev.articles.map(a =>
-      el('li', {}, el('span', { class: 'src' }, catLabel({ name: a.sourceName, color: a.color })), el('p', { lang: langOf(a.title) }, a.title)))));
-
-  const sources = el('section', { class: 'screen', style: 'padding-top:0', id: 'panel-sources', role: 'tabpanel', 'aria-labelledby': 'tab-sources' },
-    el('ul', { class: 'stories' }, [...bySource.values()].map(list => el('li', {},
-      el('div', { style: 'padding:12px 0;display:flex;flex-direction:column;gap:6px' },
-        catLabel({ name: list[0].sourceName, color: list[0].color }),
-        list.map(a => el('div', {},
-          el('h3', { lang: langOf(a.title), style: 'font-size:17px;line-height:1.28' }, a.title),
-          el('div', { class: 'row', style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' },
-            el('span', { class: 'meta', style: 'color:var(--muted);font-size:12px' }, a.publishedAt ? `פורסם ${ago(a.publishedAt)} · ${hhmm(a.publishedAt)}` : ''),
-            el('a', { class: 'open-link', href: safeUrl(a.link), target: '_blank', rel: 'noopener noreferrer' },
-              'פתח כתבה ↗', el('span', { class: 'visually-hidden' }, ` (${a.sourceName}, נפתח בחלון חדש)`))))))))));
+  const toSources = () => document.getElementById('sources')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (tab === 'sources') setTimeout(toSources, 0);
+  const day = isToday(ev.detectedAt) ? 'היום' : new Date(ev.detectedAt).toLocaleDateString('he-IL');
 
   return [
-    el('div', { class: 'article-chrome' }, header({ title: 'אירוע', dark: true, back: true, share })),
-    el('section', { class: 'hero', style: catStyle(ev.category), 'data-has-photo': ev.image ? '' : null },
-      photo(ev.image, 'bg-photo'), credit(ev.image),
-      el('span', { class: 'badge', style: catStyle(ev.category) }, ev.singleSource ? 'חם · מקור אחד' : ev.category?.name ?? 'חדשות'),
-      el('h1', { lang: langOf(ev.title) }, ev.title)),
-    el('main', { class: 'screen', id: 'main' },
+    header({ back: true, textSize: true }),
+    el('main', { class: 'screen article', id: 'main' },
+      el('span', { class: 'row' }, catLabel(ev.category, 'חדשות'), ev.singleSource && el('span', { class: 'badge-hot' }, 'חם · מקור אחד')),
+      el('h1', { lang: langOf(ev.title) }, ev.title),
       el('p', { class: 'standfirst' }, coverageText(ev) + '.'),
+      el('div', { class: 'meta-row' },
+        el('span', {}, el('b', {}, ev.singleSource ? ev.sources[0]?.name ?? '' : sourcesText(ev.sourceCount)), ` | ${day} | ${hhmm(ev.detectedAt)}`),
+        el('span', {}, live ? `עודכן: ${hhmm(ev.lastUpdatedAt ?? ev.detectedAt)}` : 'כבר לא ברשימה הראשית')),
       // AI summary written from the sources' headlines and teasers — shown only once enabled after review.
       data?.showSummaries && ev.summary?.text && el('section', { class: 'ai-summary', 'aria-label': 'סיכום אוטומטי' },
         // A single-source summary names its source and links straight to the original article.
         el('span', { class: 'ai-label' }, ev.summary.single ? `סיכום אוטומטי · לפי ${ev.articles[0]?.sourceName ?? ''}` : 'סיכום אוטומטי מכמה מקורות'),
-        el('p', { lang: 'he' }, ev.summary.text),
+        el('p', { class: 'body', lang: 'he' }, ev.summary.text),
         ev.summary.single && ev.articles[0] && el('a', { class: 'open-link', href: safeUrl(ev.articles[0].link), target: '_blank', rel: 'noopener noreferrer' },
           `לכתבה המלאה ב-${ev.articles[0].sourceName} ↗`),
         el('p', { class: 'ai-note' }, ev.summary.single
           ? 'נכתב אוטומטית על ידי בינה מלאכותית, בניסוח עצמאי, על סמך הכותרת והתקציר שפרסם המקור. ייתכנו אי־דיוקים — הכתבה המלאה נמצאת באתר המקורי.'
           : 'נכתב אוטומטית על ידי בינה מלאכותית מתוך הכותרות והתקצירים שפרסמו המקורות. ייתכנו אי־דיוקים — לפרטים המלאים פתחו את הכתבות המקוריות.')),
-      el('div', { class: 'byline' },
-        el('div', { class: 'who' },
-          el('b', {}, ev.singleSource ? 'כתבה חמה ממקור אחד' : 'זוהה אוטומטית בכמה אתרים'),
-          el('span', {}, `${isToday(ev.detectedAt) ? 'היום' : new Date(ev.detectedAt).toLocaleDateString('he-IL')} · ${hhmm(ev.detectedAt)} · ${live ? `עודכן ${ago(ev.lastUpdatedAt ?? ev.detectedAt)}` : 'כבר לא ברשימה הראשית'}`)),
-        el('span', { class: 'stack', 'aria-hidden': 'true' }, ev.sources.map(s => el('i', { style: `background:${s.color}` })))),
-      el('div', { class: 'divider' }),
-      el('div', { class: 'actions' },
-        el('button', { class: 'action-btn', type: 'button', 'aria-pressed': String(saved),
-          onclick: () => { toast(toggleSave(ev) ? 'נשמר לקריאה אחר כך' : 'הוסר מהשמורים'); route({ refresh: false }); } },
-          icon(saved ? 'saved' : 'save'), saved ? 'נשמר' : 'שמירה'),
-        el('button', { class: 'action-btn', type: 'button', onclick: share }, icon('share'), 'שיתוף'),
-        el('a', { class: 'action-btn', href: `#/event/${id}/sources` }, `${ev.articles.length} כתבות`))),
-    el('div', { style: 'padding:0 var(--gutter)' },
-      el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'תצוגת אירוע' }, tabBtn('what', 'מה קרה?'), tabBtn('sources', `מקורות (${ev.sourceCount})`))),
-    el('div', { style: 'height:12px' }),
-    current === 'what' ? whatHappened : sources,
+      el('h2', { class: 'sub-head', id: 'sources' }, `הכתבות המקוריות (${ev.articles.length})`),
+      el('ul', { class: 'source-list' }, [...bySource.values()].map(list => el('li', {},
+        srcLabel(list[0].sourceName, list[0].color),
+        list.map(a => el('a', { class: 'source-item', href: safeUrl(a.link), target: '_blank', rel: 'noopener noreferrer' },
+          el('h3', { lang: langOf(a.title) }, a.title),
+          el('span', { class: 'meta' }, a.publishedAt ? `${hhmm(a.publishedAt)} · ${ago(a.publishedAt)} · ` : '', el('b', {}, 'לכתבה המלאה ↗'),
+            el('span', { class: 'visually-hidden' }, ` (${a.sourceName}, נפתח בחלון חדש)`)))))))),
+    // On this screen the bottom bar holds the story's actions instead of the app's navigation.
+    el('div', { class: 'action-bar' },
+      el('button', { type: 'button', onclick: share }, icon('share'), 'שיתוף'),
+      el('button', { type: 'button', 'aria-pressed': String(saved),
+        onclick: () => { toast(toggleSave(ev) ? 'נשמר לקריאה אחר כך' : 'הוסר מהשמורים'); route({ refresh: false }); } },
+        icon(saved ? 'saved' : 'bookmark'), saved ? 'נשמר' : 'שמירה'),
+      el('button', { type: 'button', onclick: toSources }, icon('grid'), `מקורות (${ev.sourceCount})`)),
   ];
 }
 
 function liveView() {
   document.title = 'מבזקים · ' + BRAND;
   const items = (data?.breaking ?? []).filter(b => now() - b.publishedAt < 24 * 3600_000);
-  const names = [...new Set(items.map(b => b.sourceName))];
+  const d = new Date();
   return [
-    header({ title: 'מבזקים חיים' }),
-    el('main', { class: 'screen', id: 'main' },
-      el('section', { class: 'night-card' },
-        el('div', { class: 'top' }, el('h2', {}, 'החדשות, בזמן אמת'),
-          data?.lastScanAt && el('span', { class: 'note' }, icon('bell'), `עודכן ${ago(data.lastScanAt)}`)),
-        el('p', {}, `מבזקים כפי שפורסמו בפידים הרשמיים${names.length ? ` של ${joinNames(names)}` : ''}. כל כותרת מובילה לאתר המקורי.`)),
-      el('div', { class: 'section-head' }, el('h2', {}, `היום, ${dayMonth(new Date())}`)),
+    el('header', { class: 'app-header live' },
+      el('h1', {}, 'מבזקים'),
+      el('span', { class: 'on-air' }, el('span', { class: 'live-dot', 'aria-hidden': 'true' }), 'שידור חי')),
+    el('div', { class: 'page-bar' }, el('b', {}, `היום, ${dayLong(d)} ${dayNum(d)}`),
+      data?.lastScanAt && el('span', {}, `עדכון אחרון ${hhmm(data.lastScanAt)}`)),
+    el('main', { class: 'screen flashes', id: 'main' },
       !items.length ? empty('אין מבזקים מ-24 השעות האחרונות.')
-        : el('ol', { class: 'timeline' }, items.map((b, i) => {
-          const fresh = now() - b.publishedAt < 15 * 60_000;
-          return el('li', { class: `tl-item${fresh || i === 0 ? ' fresh' : ''}` },
-            el('div', { class: 'tl-marker', 'aria-hidden': 'true' },
-              el('time', {}, hhmm(b.publishedAt)), el('span', { class: 'point' }), i < items.length - 1 && el('span', { class: 'rail' })),
-            el('div', { class: 'tl-body' },
-              el('div', { class: 'tl-meta' }, fresh && el('span', { class: 'badge-new' }, 'חדש'), el('span', {}, b.category?.name ?? 'מבזק'), el('span', { style: `color:${b.color}` }, `· ${b.sourceName}`)),
-              el('h3', { lang: langOf(b.title) }, el('a', { href: safeUrl(b.link), target: '_blank', rel: 'noopener noreferrer' }, b.title)),
-              el('p', { class: 'detail' }, el('time', { class: 'visually-hidden', datetime: new Date(b.publishedAt).toISOString() }, hhmm(b.publishedAt)), `${ago(b.publishedAt)} · פתח ב-${b.sourceName} ↗`)));
-        }))),
+        : el('ol', { class: 'flash-list' }, items.map((b, i) =>
+          el('li', { class: i === 0 ? 'first' : null },
+            el('a', { href: safeUrl(b.link), target: '_blank', rel: 'noopener noreferrer' },
+              el('time', { datetime: new Date(b.publishedAt).toISOString() }, hhmm(b.publishedAt)),
+              el('span', { class: 'copy' },
+                el('h3', { lang: langOf(b.title) }, b.title),
+                el('span', { class: 'meta' }, `${b.sourceName}${b.category ? ' | ' + b.category.name : ''} | `, el('b', {}, 'לכתבה המלאה ↗'))))))),
+      el('p', { class: 'footnote' }, 'מבזקים כפי שפורסמו בפידים הרשמיים של האתרים. כל כותרת מובילה לאתר המקורי.')),
   ];
 }
 
 const topicState = { q: '', sources: new Set() };
 function topicsView(catId) {
-  document.title = 'נושאים · ' + BRAND;
+  document.title = 'מדורים · ' + BRAND;
   const all = data?.headlines ?? [];
   const cats = data?.categories ?? [];
   const cat = catId ? cats.find(c => c.id === catId) : null;
@@ -378,7 +342,7 @@ function topicsView(catId) {
   });
 
   return [
-    header({ title: cat ? cat.name : 'נושאים', back: !!cat }),
+    header({ title: cat ? cat.name : 'מדורים', back: !!cat }), cat && sectionTabs(cat.id),
     el('main', { class: 'screen', id: 'main' },
       el('label', { class: 'search' }, input, icon('search')),
       el('div', { class: 'section-head' }, el('h2', {}, 'המקורות'),
@@ -395,7 +359,7 @@ function topicsView(catId) {
           el('a', { class: `topic-tile${i === 2 ? ' wide' : ''}`, href: `#/topics/${c.id}`, style: `--c:${c.color}` },
             el('span', { class: 'name' }, c.name), el('span', { class: 'count' }, `${counts.get(c.id)} כותרות ב-24 שעות`)))),
         el('ul', { class: 'stories' }, ranked.slice(3).map(c => el('li', {},
-          el('a', { class: 'list-link', href: `#/topics/${c.id}` }, el('span', { class: 'label' }, el('span', { class: 'cat', style: `--c:${c.color}` }, c.name), `${counts.get(c.id)} כותרות`), icon('more'))))),
+          el('a', { class: 'list-link', href: `#/topics/${c.id}` }, el('span', { class: 'label' }, el('span', { class: 'cat' }, c.name), `${counts.get(c.id)} כותרות`), icon('more'))))),
       ],
       el('div', { class: 'section-head' }, el('h2', {}, browsing ? 'כל הכותרות' : `${filtered.length} כותרות`)),
       filtered.length ? results : empty('לא נמצאו כותרות.', 'נסו מילה אחרת או הסירו את הסינון.')),
@@ -442,7 +406,7 @@ async function statusView() {
     el('table', { class: 'status-table' },
       el('thead', {}, el('tr', {}, el('th', {}, 'מקור'), el('th', {}, 'מצב'), el('th', {}, 'עדכון'), el('th', {}, 'פריטים'))),
       el('tbody', {}, s.sources.flatMap(src => src.feeds.map(f => el('tr', {},
-        el('td', {}, catLabel({ name: src.name, color: src.color })),
+        el('td', {}, srcLabel(src.name, src.color)),
         el('td', {}, f.lastError ? el('span', { class: 'bad' }, `שגיאה: ${f.lastError}`) : f.lastOkAt ? el('span', { class: 'ok' }, 'תקין') : '—'),
         el('td', {}, f.lastOkAt ? ago(f.lastOkAt) : '—'),
         el('td', {}, String(f.items))))))),
@@ -458,9 +422,9 @@ function openMenu() {
   const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
   const sheet = el('aside', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'תפריט' },
     el('div', { class: 'sheet-head' },
-      el('a', { class: 'brand', href: '#/', onclick: close, style: 'border:0' }, brandMark(), el('span', { class: 'brand-name', style: 'font-size:20px' }, BRAND)),
+      el('a', { class: 'brand on-light', href: '#/', onclick: close, style: 'border:0' }, brandMark('logo-mark.svg'), el('span', { class: 'brand-name' }, BRAND)),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
-    link('#/', 'house', 'בית'), link('#/live', 'radio', 'מבזקים'), link('#/topics', 'grid', 'נושאים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
+    link('#/', 'house', 'ראשי'), link('#/live', 'zap', 'מבזקים'), link('#/topics', 'grid', 'מדורים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
     el('a', { href: '#', onclick: e => { e.preventDefault(); close(); openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));
   document.body.append(backdrop, sheet);
@@ -592,8 +556,10 @@ async function route({ refresh = true } = {}) {
   else if (hash === '#/status') { view = await statusView(); nav = 'saved'; }
   else view = homeView();
   setNav(nav);
+  document.body.dataset.screen = hash.startsWith('#/event/') ? 'event' : nav;
   const y = window.scrollY;
   app.replaceChildren(...[view].flat(Infinity).filter(Boolean));
+  app.querySelector('.sections [aria-current]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
   return y;
 }
 

@@ -1,4 +1,4 @@
-// Draws the "זמן אמת" app icon (dark square, two white corner marks framing a red dot) as PNG files.
+// Draws the "זמן אמת" app icon (blue square, two white corner marks framing a red dot) as PNG files.
 // iPhone "Add to Home Screen" needs a PNG (apple-touch-icon); it rounds the corners itself, so the
 // icon is drawn full-bleed. No image library needed: shapes are rasterized here and encoded with zlib.
 //   node scripts/make-icons.js
@@ -7,7 +7,7 @@ import zlib from 'node:zlib';
 import path from 'node:path';
 import { ROOT } from '../src/config.js';
 
-const BG = [14, 19, 23], WHITE = [255, 255, 255], RED = [224, 40, 46];
+const BG = [20, 71, 214], WHITE = [255, 255, 255], RED = [255, 59, 59];
 // Geometry in 0..1 units of the icon's side.
 const T = 0.055; // stroke thickness
 const RECTS = [
