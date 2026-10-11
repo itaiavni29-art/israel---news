@@ -1,7 +1,17 @@
 // Summarizer with a fake Gemini server — no API key or network needed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Summarizer, checkSummary, longestSharedRun } from '../src/summarizer.js';
+import { Summarizer, checkSummary, longestSharedRun, spellingProblem } from '../src/summarizer.js';
+
+test('spellingProblem: foreign letters, mixed words and misplaced final letters are caught; normal text passes', () => {
+  assert.equal(spellingProblem('ראש הממשלה נפגש עם נציגי ה-CNN וה־BBC ב-12:30, לפי דיווח ב"הארץ".'), null);
+  assert.equal(spellingProblem('חברת OpenAI הציגה מוצר חדש, iPhone 17 נמכר ב-3,000 ש"ח.'), null);
+  assert.match(spellingProblem('הממשלה אישרה את التوصية החדשה'), /another script/);
+  assert.match(spellingProblem('השר הודיע על 計画 חדשה'), /another script/);
+  assert.match(spellingProblem('הוועדה דנה בהצעה הпроект'), /another script/);
+  assert.match(spellingProblem('הממשלהa אישרה את התקציב'), /mixed/);
+  assert.match(spellingProblem('השרים דנו בהחלטםה החדשה'), /final letter/);
+});
 
 const quiet = { info() {}, error() {} };
 const SRC = [

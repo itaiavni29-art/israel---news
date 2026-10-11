@@ -31,6 +31,7 @@ const PROMPT = `אתה עורך חדשות. לפניך כותרות ותקציר
 - מספרים כתוב בספרות ובאותה צורה שבה הם מופיעים במקורות.
 - שמות של אנשים, מקומות, גופים ומונחים עובדתיים נשארים כפי שהם במקורות: אל תחליף מונח במונח בעל גוון פוליטי או רגשי שונה, ואל תוסיף שם פרטי, תואר או תפקיד שלא כתובים שם.
 - אל תזכיר את שמות האתרים, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
+- כתוב בעברית תקנית בלבד. אסור שתופיע אות משפה אחרת (ערבית, יפנית, רוסית וכדומה) בתוך הטקסט. שמות לועזיים כתוב בעברית, או באנגלית רק אם כך הם מופיעים במקור. בדוק את האיות של כל מילה לפני שאתה מחזיר את התשובה.
 - החזר רק את טקסט הסיכום.`;
 
 // A "hot" story has ONE source, so the summary must stay well away from that site's wording:
@@ -44,21 +45,41 @@ const PROMPT_SINGLE = `אתה עורך חדשות. לפניך כותרת ותק�
 - מסור עובדות בלבד: בלי ציטוטים, בלי פרשנות ובלי הערכות של הכותב.
 - השתמש רק במידע שמופיע בטקסט שלמטה. אל תוסיף שמות, מספרים, תאריכים או סיבות שלא כתובים שם.
 - אל תזכיר את שם האתר, אל תכתוב כותרת, ואל תשתמש בתבליטים או בעיצוב.
+- כתוב בעברית תקנית בלבד. אסור שתופיע אות משפה אחרת (ערבית, יפנית, רוסית וכדומה) בתוך הטקסט. שמות לועזיים כתוב בעברית, או באנגלית רק אם כך הם מופיעים במקור. בדוק את האיות של כל מילה לפני שאתה מחזיר את התשובה.
 - החזר רק את טקסט הסיכום.`;
 
 // Bump when prompts or checks change: events whose summary failed under older rules get another try.
-const RULES_VERSION = 3;
+const RULES_VERSION = 4;
 
 // What to tell the model when its previous attempt failed a check (in Hebrew, and actionable).
 const HINT = (why, single) =>
   /copies|too close/.test(why) ? `הטקסט היה קרוב מדי לניסוח המקור${single ? '' : ', כנראה בגלל ציטוט ארוך'}. נסח מחדש במילים אחרות ומסור ציטוטים בלשון עקיפה`
   : /numbers/.test(why) ? 'הופיעו מספרים שלא כתובים במקורות. השתמש רק במספרים שמופיעים בטקסט, ובאותה צורת כתיבה'
   : /length/.test(why) ? 'האורך לא התאים. כתוב 2 עד 3 משפטים מלאים'
+  : /spelling/.test(why) ? 'בטקסט הופיעו אותיות משפה אחרת או מילה שבורה. כתוב הכול בעברית תקנית ונקייה, ובדוק כל מילה'
   : 'התשובה לא הייתה סיכום בעברית';
 
 const pacificDay = (ms = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: DAY_TZ }).format(ms);
 const words = s => cleanTitle(s).split(' ').filter(Boolean);
 const numbers = s => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map(n => n.replace(',', '.'));
+
+/**
+ * Signs of a garbled word, which language models sometimes produce in Hebrew: a letter from another
+ * script (Arabic, Japanese, Cyrillic…), a word that mixes Hebrew and Latin letters, a final-form letter
+ * (ך ם ן ף ץ) in the middle of a word, or a broken character. This is not a spell-checker: a real but
+ * misspelled Hebrew word is not caught here.
+ * @returns {string|null} what was found, or null
+ */
+export function spellingProblem(text) {
+  const foreign = text.match(/(?![\p{Script=Hebrew}\p{Script=Latin}])\p{L}/u);
+  if (foreign) return `letter from another script: "${foreign[0]}"`;
+  if (/\uFFFD/.test(text)) return 'broken character';
+  for (const word of text.split(/[\s\-־–—\/]+/)) {
+    if (/[א-ת]/.test(word) && /[A-Za-z]/.test(word)) return `mixed Hebrew and Latin letters: "${word}"`;
+    if (/[ךםןףץ][א-ת]/.test(word)) return `final letter inside a word: "${word}"`;
+  }
+  return null;
+}
 
 /** Longest run of consecutive words shared by a and b. */
 export function longestSharedRun(a, b) {
@@ -106,6 +127,8 @@ export function withoutQuotes(text) {
 export function checkSummary(summary, sourceTexts, { single = false } = {}) {
   const n = words(summary).length;
   if (!/[א-ת]/.test(summary)) return 'not Hebrew';
+  const spelling = spellingProblem(summary);
+  if (spelling) return `spelling: ${spelling}`;
   if (n < (single ? 10 : 15) || n > (single ? 70 : 110)) return `length ${n} words`;
   const known = new Set(sourceTexts.flatMap(numbers));
   const invented = numbers(summary).filter(x => !known.has(x));
@@ -205,6 +228,8 @@ export class Summarizer {
     if (!this.enabled) return { done: 0, skipped: 'no GEMINI_API_KEY' };
     let done = 0, rejected = 0;
     try { await this.discoverModels(); } catch (e) { this.lastError = e.message; this.log.error(`[summarizer] ${e.message}`); return { done, error: e.message }; }
+    // Summaries written before the spelling check existed: drop the garbled ones so they are written again.
+    for (const ev of events) if (ev.summary && spellingProblem(ev.summary.text)) { delete ev.summary; delete ev.summaryTried; }
     const teaserOf = a => pool.get(a.key)?.teaser ?? a.teaser;
     const isSingle = ev => !!ev.provisional || new Set(ev.articles.map(a => a.sourceId)).size < minSources;
     const todo = events.filter(ev => {
