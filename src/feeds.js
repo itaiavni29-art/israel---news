@@ -116,10 +116,16 @@ export class FeedFetcher {
     const sources = this.config.sources.filter(s => s.enabled !== false);
     for (const [i, source] of sources.entries()) {
       const reject = buildFilter(source, this.config.globalFilters);
+      const rejectSport = buildFilter(source, this.config.globalFilters, { sport: true });
+      // sportUrlPatterns: sport articles that arrive inside the site's general feed (Israel Hayom)
+      const sportUrl = (source.sportUrlPatterns ?? []).map(p => new RegExp(p, 'i'));
       const rep = { id: source.id, name: source.name, feeds: [], kept: 0, dropped: {} };
       // breakingFeeds: the site's own "breaking news" feed — items from it are flagged as breaking.
-      const feeds = [...source.feeds.map(url => ({ url })), ...(source.breakingFeeds ?? []).map(url => ({ url, breaking: true }))];
-      for (const { url, breaking } of feeds) {
+      // sportFeeds: the site's sport feed — its items are flagged as sport: they appear only in the sport
+      // section and never take part in the main list of events.
+      const feeds = [...source.feeds.map(url => ({ url })), ...(source.breakingFeeds ?? []).map(url => ({ url, breaking: true })),
+        ...(source.sportFeeds ?? []).map(url => ({ url, sport: true }))];
+      for (const { url, breaking, sport: sportFeed } of feeds) {
         if (articles.length || i || rep.feeds.length) await sleep(this.config.delayBetweenRequestsMs);
         const r = await this.fetchOne(source, url, now);
         rep.feeds.push({ url, status: r.status, error: r.error ?? null, items: r.items.length });
@@ -128,9 +134,10 @@ export class FeedFetcher {
         for (const it of r.items) if (it.image) imageUses.set(it.image, (imageUses.get(it.image) ?? 0) + 1);
         for (let it of r.items) {
           if (it.image && imageUses.get(it.image) > 2) { const { image, ...rest } = it; it = rest; }
-          const why = reject(it) ?? (it.publishedAt == null ? 'bad-date' : now - it.publishedAt > maxAge ? 'too-old' : null);
+          const sport = sportFeed || sportUrl.some(r => r.test(it.link));
+          const why = (sport ? rejectSport : reject)(it) ?? (it.publishedAt == null ? 'bad-date' : now - it.publishedAt > maxAge ? 'too-old' : null);
           if (why) { rep.dropped[why] = (rep.dropped[why] ?? 0) + 1; continue; }
-          articles.push({ ...it, key: articleKey(it.link), sourceId: source.id, ...(breaking && { breaking: true }) });
+          articles.push({ ...it, key: articleKey(it.link), sourceId: source.id, ...(breaking && !sport && { breaking: true }), ...(sport && { sport: true }) });
           rep.kept++;
         }
       }
@@ -139,7 +146,7 @@ export class FeedFetcher {
     // The same article can appear in two feeds of one source (e.g. Globes) — dedupe by key,
     // keeping the "breaking" flag if any of its feeds had it.
     const byKey = new Map();
-    for (const a of articles) byKey.set(a.key, byKey.has(a.key) ? { ...byKey.get(a.key), breaking: byKey.get(a.key).breaking || a.breaking } : a);
+    for (const a of articles) byKey.set(a.key, byKey.has(a.key) ? { ...byKey.get(a.key), breaking: byKey.get(a.key).breaking || a.breaking, sport: byKey.get(a.key).sport || a.sport } : a);
     const unique = [...byKey.values()];
     return { articles: unique, report };
   }

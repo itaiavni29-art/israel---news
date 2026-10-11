@@ -2,8 +2,9 @@
 
 const compile = list => (list ?? []).map(p => new RegExp(p, 'i'));
 
-export function buildFilter(source, globalFilters = {}) {
-  const include = compile(source.includeUrlPatterns);
+/** @param {{sport?: boolean}} [opts] sport: the item comes from a sport feed, so the news-section rule does not apply */
+export function buildFilter(source, globalFilters = {}, { sport = false } = {}) {
+  const include = sport ? [] : compile(source.includeUrlPatterns);
   const exclude = compile(source.excludeUrlPatterns);
   const titleExclude = compile([...(globalFilters.excludeTitlePatterns ?? []), ...(source.excludeTitlePatterns ?? [])]);
 

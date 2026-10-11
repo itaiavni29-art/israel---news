@@ -37,7 +37,8 @@
       "sponsored",
       "promoted",
       "horoscope",
-      "best sites to buy"
+      "best sites to buy",
+      "^דקה d+"
     ]
   },
   "sources": [
@@ -54,6 +55,9 @@
       ],
       "breakingFeeds": [
         "https://www.ynet.co.il/Integration/StoryRss1854.xml"
+      ],
+      "sportFeeds": [
+        "https://www.ynet.co.il/Integration/StoryRss3.xml"
       ]
     },
     {
@@ -82,6 +86,9 @@
         "israelhayom\\.co\\.il/news/",
         "israelhayom\\.co\\.il/business/",
         "israelhayom\\.co\\.il/tech/tech-news/"
+      ],
+      "sportUrlPatterns": [
+        "israelhayom\\.co\\.il/sport/"
       ]
     },
     {
@@ -171,9 +178,28 @@
       "color": "#0b6e99",
       "enabled": true,
       "hot": false,
-      "feeds": ["https://www.kikar.co.il/feed"],
-      "includeUrlPatterns": ["kikar\\.co\\.il/(news|israel-news|world-news|security-news|political-news|arab-news|law-and-order|laws|health-news|economy-news|haredim|haredim-news)/"],
-      "excludeTitlePatterns": ["כיכר FM", "מבזק חדשות", "צפו$"]
+      "feeds": [
+        "https://www.kikar.co.il/feed"
+      ],
+      "includeUrlPatterns": [
+        "kikar\\.co\\.il/(news|israel-news|world-news|security-news|political-news|arab-news|law-and-order|laws|health-news|economy-news|haredim|haredim-news)/"
+      ],
+      "excludeTitlePatterns": [
+        "כיכר FM",
+        "מבזק חדשות",
+        "צפו$"
+      ]
+    },
+    {
+      "id": "one",
+      "name": "ONE",
+      "color": "#e2001a",
+      "enabled": true,
+      "hot": false,
+      "feeds": [],
+      "sportFeeds": [
+        "https://www.one.co.il/rss"
+      ]
     },
     {
       "id": "jpost",

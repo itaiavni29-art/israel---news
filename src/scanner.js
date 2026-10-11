@@ -93,14 +93,17 @@ export class Scanner {
       const cutoff = now - this.config.articleMaxAgeHours * 3600_000;
       for (const [k, a] of this.pool) if (a.publishedAt < cutoff) this.pool.delete(k);
 
-      const pending = [...this.pool.values()].filter(a => !a.vec);
+      // Sport headlines live only in the sport section: no embedding, no event detection.
+      const news = () => [...this.pool.values()].filter(a => !a.sport);
+      for (const a of this.pool.values()) if (a.sport) a.category = 'sport';
+      const pending = news().filter(a => !a.vec);
       if (pending.length) (await this.embedder.embed(pending.map(a => a.title))).forEach((v, i) => { pending[i].vec = v; });
       await this.categorizer.init();
       for (const a of pending) a.category = this.categorizer.categorize(a);
       // Events saved before categories existed: label their articles once.
       for (const ev of [...this.store.active, ...this.store.retired]) for (const a of ev.articles) if (a.category === undefined) a.category = this.categorizer.categorize(a);
 
-      const { created, updated, retired, single } = this.store.update([...this.pool.values()], now);
+      const { created, updated, retired, single } = this.store.update(news(), now);
       if (this.summarizer.enabled) {
         this.lastSummaries = await this.summarizer.summarizeEvents(this.store.active, this.pool, this.sourcesById, this.config.minSources);
         log.info(`[summarizer] ${JSON.stringify(this.lastSummaries)}`);
@@ -155,7 +158,8 @@ export class Scanner {
         return e;
       }),
       breaking: pool.filter(a => a.breaking).slice(0, 40).map(item),
-      headlines: pool.slice(0, 400).map(item),
+      // sport has its own quota, so a busy match night does not push the news out of the list (or the other way round)
+      headlines: [...pool.filter(a => !a.sport).slice(0, 400), ...pool.filter(a => a.sport).slice(0, 150)].map(item),
     };
   }
 
@@ -172,7 +176,7 @@ export class Scanner {
       },
       sources: this.config.sources.filter(s => s.enabled !== false).map(s => ({
         id: s.id, name: s.name, color: s.color,
-        feeds: [...s.feeds, ...(s.breakingFeeds ?? [])].map(url => ({ url, ...(feedState[url] ?? { lastOkAt: null, failures: 0, lastError: null, items: 0 }) })),
+        feeds: [...s.feeds, ...(s.breakingFeeds ?? []), ...(s.sportFeeds ?? [])].map(url => ({ url, ...(feedState[url] ?? { lastOkAt: null, failures: 0, lastError: null, items: 0 }) })),
       })),
     };
   }

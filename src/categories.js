@@ -8,12 +8,15 @@ export const CATEGORIES = [
   { id: 'politics', name: 'פוליטיקה', color: '#174a7e', describe: 'פוליטיקה: הכנסת, הממשלה, הבחירות, הקואליציה והאופוזיציה, נתניהו, שרים ומפלגות' },
   { id: 'security', name: 'ביטחון', color: '#111a22', describe: 'ביטחון וצבא: צה"ל, מלחמה, חמאס, חיזבאללה, איראן, פיגוע, טילים, חיילים ושב"כ' },
   { id: 'economy', name: 'כלכלה', color: '#19705a', describe: 'כלכלה ועסקים: שוק ההון, מניות, בורסה, בנקים, ריבית, מחירים, חברות ועסקאות' },
+  // sport is never guessed from the wording (describe: null): only articles from the sites' sport feeds get it
+  { id: 'sport', name: 'ספורט', color: '#0b7a3b', describe: null },
   { id: 'world', name: 'עולם', color: '#5b4a9e', describe: 'חדשות העולם: ארצות הברית, טראמפ, אירופה, רוסיה ואוקראינה, סין, האו"ם ומדינות זרות' },
   { id: 'law', name: 'משפט ופלילים', color: '#8a3b12', describe: 'משפט ופלילים: משטרה, חקירה, מעצר, רצח, בית משפט, כתב אישום ופרשות' },
   { id: 'society', name: 'חברה ובריאות', color: '#a35c14', describe: 'חברה, בריאות וחינוך: בתי ספר, בתי חולים, משרד הבריאות, רווחה, תאונות ומזג האוויר' },
   { id: 'tech', name: 'טכנולוגיה', color: '#2d6a8f', describe: 'טכנולוגיה והייטק: בינה מלאכותית, סטארטאפים, סייבר, אפל, גוגל ואפליקציות' },
 ];
 const byId = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+const GUESSABLE = CATEGORIES.filter(c => c.describe);
 
 const URL_RULES = [
   [/\/(politics|elections?|knesset)/i, 'politics'],
@@ -31,16 +34,17 @@ export class Categorizer {
   constructor(embedder) { this.embedder = embedder; this.protos = null; }
 
   async init() {
-    if (!this.protos) this.protos = await this.embedder.embed(CATEGORIES.map(c => c.describe));
+    if (!this.protos) this.protos = await this.embedder.embed(GUESSABLE.map(c => c.describe));
   }
 
   /** @param {{link: string, vec?: Float32Array}} article @returns {string|null} category id */
   categorize(article) {
+    if (article.sport) return 'sport';
     for (const [re, id] of URL_RULES) if (re.test(article.link)) return id;
     if (!article.vec || !this.protos) return null;
     const scores = this.protos.map(p => cosine(article.vec, p)).map((s, i) => [s, i]).sort((a, b) => b[0] - a[0]);
     // Only label when the best topic is clearly ahead of the runner-up.
-    return scores[0][0] - scores[1][0] >= 0.01 ? CATEGORIES[scores[0][1]].id : null;
+    return scores[0][0] - scores[1][0] >= 0.01 ? GUESSABLE[scores[0][1]].id : null;
   }
 }
 

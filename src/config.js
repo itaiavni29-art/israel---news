@@ -14,7 +14,7 @@ export function loadConfig(file = path.join(ROOT, 'config.json')) {
   need(Array.isArray(c.sources) && c.sources.length, 'sources must be a non-empty list');
   const ids = new Set();
   for (const s of c.sources) {
-    need(s.id && s.name && Array.isArray(s.feeds) && s.feeds.length, `source ${s.id ?? '?'} needs id, name and feeds`);
+    need(s.id && s.name && Array.isArray(s.feeds) && (s.feeds.length || s.sportFeeds?.length), `source ${s.id ?? '?'} needs id, name and feeds`);
     need(!ids.has(s.id), `duplicate source id ${s.id}`);
     ids.add(s.id);
   }
