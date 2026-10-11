@@ -38,7 +38,7 @@
       "promoted",
       "horoscope",
       "best sites to buy",
-      "^דקה d+"
+      "^דקה \\d+"
     ]
   },
   "sources": [
