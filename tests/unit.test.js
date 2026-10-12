@@ -103,3 +103,21 @@ test('lexical guard: shared names count, shared common words do not', async () =
   assert.equal(lex.sharesRareWord(pool[0], pool[1]), false); // only "שוק" in common — the real false merge
   assert.equal(lex.sharesRareWord(pool[1], pool[2]), true);  // "אלטשולר" — same story
 });
+
+test('archive: events with a summary get a page entry; old days are dropped', async () => {
+  const { updateArchive, dayOf, shortId } = await import('../src/archive.js');
+  const fs = await import('node:fs'), os = await import('node:os'), path = await import('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arch-'));
+  const now = Date.now(), ev = (id, at, summary) => ({ id, detectedAt: at, title: 'כותרת ' + id, sourceCount: 2, singleSource: false, category: { id: 'economy', name: 'כלכלה' },
+    summary: summary ? { text: summary } : null, articles: [{ sourceName: 'ynet', title: 'א', link: 'https://example.com/a', publishedAt: at }] });
+  updateArchive(dir, [ev('aaaaaaaa-1111-2222-3333-444444444444', now, 'סיכום'), ev('bbbbbbbb-1111-2222-3333-444444444444', now, null)], now);
+  const index = JSON.parse(fs.readFileSync(path.join(dir, 'archive/index.json'), 'utf8'));
+  assert.equal(index.events.length, 1);                       // the one without a summary has no page
+  assert.equal(index.events[0].id, shortId('aaaaaaaa-1111-2222-3333-444444444444'));
+  const day = JSON.parse(fs.readFileSync(path.join(dir, 'archive', dayOf(now) + '.json'), 'utf8'));
+  assert.equal(day.events[index.events[0].id].summary, 'סיכום');
+  updateArchive(dir, [], now + 40 * 86400_000);               // forty days later the day file and its entry are gone
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'archive/index.json'), 'utf8')).events.length, 0);
+  assert.equal(fs.existsSync(path.join(dir, 'archive', dayOf(now) + '.json')), false);
+  fs.rmSync(dir, { recursive: true });
+});

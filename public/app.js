@@ -237,7 +237,8 @@ function homeView() {
           rest.length && el('div', { class: 'band', 'aria-hidden': 'true' }),
           rest.length && el('ul', { class: 'stories' }, rest.map(ev => storyRow(ev))),
         ],
-      el('p', { class: 'footnote' }, `${updatedText()}. האתר לא מעתיק כתבות: רק כותרות וקישורים לאתרים המקוריים.`)),
+      el('p', { class: 'footnote' }, `${updatedText()}. האתר לא מעתיק כתבות: רק כותרות וקישורים לאתרים המקוריים. `,
+        !LOCAL && el('a', { href: 'https://zmanemetnews.co.il/latest' }, 'ארכיון האירועים'))),
   ];
 }
 
@@ -249,8 +250,12 @@ function eventView(id, tab) {
   const bySource = new Map();
   for (const a of ev.articles) bySource.set(a.sourceId, [...(bySource.get(a.sourceId) ?? []), a]);
   const share = async () => {
-    const payload = { title: ev.title, text: `${ev.title} — ${coverageText(ev)}`, url: location.href };
-    try { if (navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(location.href); toast('הקישור הועתק'); } } catch { /* cancelled */ }
+    // An event with a summary has a page of its own on the main site: that link opens for anyone, shows the
+    // headline when shared, and keeps working after the event leaves the list.
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(ev.detectedAt);
+    const url = ev.summary?.text ? `https://zmanemetnews.co.il/e/${day}/${ev.id.replace(/-/g, '').slice(0, 10)}` : location.href;
+    const payload = { title: ev.title, text: `${ev.title} — ${coverageText(ev)}`, url };
+    try { if (navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(url); toast('הקישור הועתק'); } } catch { /* cancelled */ }
   };
   const saved = isSaved(ev.id);
   const live = data?.events.some(e => e.id === ev.id);

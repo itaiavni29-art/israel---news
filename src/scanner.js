@@ -5,6 +5,7 @@
 //     repo's `data` branch between runs.
 //   • local: server.js keeps a Scanner alive and calls scanOnce() every scanIntervalMinutes.
 // Either way the page only reads the published events.json / status.json.
+import { updateArchive } from './archive.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './config.js';
@@ -80,7 +81,9 @@ export class Scanner {
     };
     try {
       write(this.stateFile, { savedAt: Date.now(), store: this.store.toJSON(), feeds: this.fetcher.toJSON(), lastScan: this.lastScan, summarizer: this.summarizer.toJSON() });
-      write(path.join(this.publishDir, 'events.json'), this.eventsPayload());
+      const payload = this.eventsPayload();
+      write(path.join(this.publishDir, 'events.json'), payload);
+      updateArchive(this.publishDir, payload.events); // pages of their own for the events (see src/archive.js)
       write(path.join(this.publishDir, 'status.json'), this.status());
     } catch (e) { log.error('[scanner] could not save state:', e.message); }
   }

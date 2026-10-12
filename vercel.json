@@ -3,5 +3,27 @@
   "installCommand": "",
   "buildCommand": "",
   "outputDirectory": "public",
-  "git": { "deploymentEnabled": { "data": false } }
+  "git": {
+    "deploymentEnabled": {
+      "data": false
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/e/:day/:id",
+      "destination": "/api/event?day=:day&id=:id"
+    },
+    {
+      "source": "/s/:cat",
+      "destination": "/api/section?cat=:cat"
+    },
+    {
+      "source": "/latest",
+      "destination": "/api/section"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    }
+  ]
 }
