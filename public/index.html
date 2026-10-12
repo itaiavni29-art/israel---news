@@ -35,5 +35,13 @@
   </nav>
 
   <script src="app.js" type="module"></script>
+  <!-- Vercel Web Analytics (visitor counts, no cookies). Only where Vercel serves the site: the script
+       does not exist on GitHub Pages or on a local server. -->
+  <script>
+    if (!/\.github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      const s = document.createElement('script'); s.defer = true; s.src = '/_vercel/insights/script.js'; document.head.append(s);
+    }
+  </script>
 </body>
 </html>
