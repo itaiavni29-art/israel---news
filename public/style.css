@@ -355,6 +355,12 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .news-strip span { padding: 11px 0 8px; border-bottom: 3px solid transparent; }
 .news-strip .on { color: var(--brand); font-weight: 700; border-bottom-color: var(--brand); box-shadow: 0 0 0 6px var(--brand-soft); background: var(--brand-soft); border-radius: 4px 4px 0 0; }
 
+/* the install guide when the browser offers its own install dialog: one button instead of the steps */
+.guide .one-tap-intro { display: none; }
+.guide.one-tap-ready .tabs, .guide.one-tap-ready .guide-body, .guide.one-tap-ready .steps-intro, .guide.one-tap-ready .understood { display: none; }
+.guide.one-tap-ready .one-tap-intro { display: block; }
+.guide.one-tap-ready .one-tap { min-height: 56px; font-size: 18px; }
+
 /* ==========================================================================
    Computers (wide screens). Everything above is the phone layout and stays as it is;
    from 1000px the same pages get a wide shell, the navigation moves into the blue

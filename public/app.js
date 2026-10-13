@@ -430,7 +430,7 @@ function openMenu() {
       el('a', { class: 'brand on-light', href: '#/', onclick: close, style: 'border:0' }, brandMark('logo-mark.svg'), el('span', { class: 'brand-name' }, BRAND)),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     link('#/', 'house', 'ראשי'), link('#/live', 'zap', 'מבזקים'), link('#/topics', 'grid', 'מדורים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
-    el('a', { href: '#', onclick: e => { e.preventDefault(); close(); openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
+    el('a', { href: '#', onclick: async e => { e.preventDefault(); close(); if (!(await installNow())) openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));
   document.body.append(backdrop, sheet);
   document.addEventListener('keydown', onKey);
@@ -449,7 +449,23 @@ const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platfor
 const isAndroid = /Android/.test(navigator.userAgent);
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let installPrompt = null; // Android Chrome hands us its own install dialog when the site qualifies
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; document.querySelector('.guide .one-tap')?.removeAttribute('hidden'); });
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installPrompt = e;
+  document.querySelector('.guide .one-tap')?.removeAttribute('hidden');
+  document.querySelector('.guide:not(.news)')?.classList.add('one-tap-ready');
+});
+window.addEventListener('appinstalled', () => { installPrompt = null; a2hs.set({ ...a2hs.get(), never: true }); document.querySelector('.guide:not(.news) .icon-btn')?.click(); toast('זמן אמת נוסף למסך הבית'); });
+// The browser's own install dialog, in one tap. Returns false where the browser gives us none (iPhone, some Android browsers).
+async function installNow() {
+  const p = installPrompt;
+  if (!p) return false;
+  installPrompt = null;
+  p.prompt();
+  try { if ((await p.userChoice).outcome === 'accepted') a2hs.set({ ...a2hs.get(), never: true }); } catch { /* dismissed */ }
+  return true;
+}
+// A service worker that caches nothing (the news must always be fresh): some browsers only offer installation to sites that have one.
+if ('serviceWorker' in navigator && !LOCAL) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 // Drawings for the steps: schematic, drawn here (not screenshots of anyone's interface).
 const art = body => { const d = el('div', { class: 'guide-art', 'aria-hidden': 'true' }); d.innerHTML = `<svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg" font-family="Arimo, Arial, sans-serif">${body}</svg>`; return d; };
@@ -513,17 +529,17 @@ function openInstallGuide() {
         el('li', {}, pic, el('div', {}, el('h3', {}, el('span', { class: 'num' }, String(i + 1)), title), el('p', {}, text))))),
       el('p', { class: 'guide-note' }, g.note));
   };
-  const oneTap = el('button', { class: 'guide-btn primary one-tap', type: 'button', hidden: !installPrompt, onclick: async () => { const p = installPrompt; installPrompt = null; close(); p?.prompt(); } }, 'התקנה בלחיצה אחת');
+  const oneTap = el('button', { class: 'guide-btn primary one-tap', type: 'button', hidden: !installPrompt, onclick: () => { close(); installNow(); } }, 'הוספה למסך הבית בלחיצה אחת');
   const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
-  const box = el('section', { class: 'guide', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'guide-title' },
+  const box = el('section', { class: 'guide' + (installPrompt ? ' one-tap-ready' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'guide-title' },
     el('div', { class: 'guide-head' },
       ART.home(),
-      el('div', {}, el('h2', { id: 'guide-title' }, `${BRAND} במסך הבית`), el('p', {}, 'שלושה צעדים, והאתר נפתח כמו אפליקציה: סמל במסך הבית ומסך מלא.')),
+      el('div', {}, el('h2', { id: 'guide-title' }, `${BRAND} במסך הבית`), el('p', { class: 'steps-intro' }, 'שלושה צעדים, והאתר נפתח כמו אפליקציה: סמל במסך הבית ומסך מלא.'), el('p', { class: 'one-tap-intro' }, 'לחיצה אחת, והאתר נפתח כמו אפליקציה: סמל במסך הבית ומסך מלא.')),
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     tabs, body,
     el('div', { class: 'guide-actions' },
       oneTap,
-      el('button', { class: 'guide-btn primary', type: 'button', onclick: close }, 'הבנתי'),
+      el('button', { class: 'guide-btn primary understood', type: 'button', onclick: close }, 'הבנתי'),
       el('button', { class: 'guide-btn', type: 'button', onclick: never }, 'אל תציג שוב')));
   draw();
   document.body.append(backdrop, box);
