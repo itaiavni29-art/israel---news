@@ -6,3 +6,4 @@ public/status.json
 
 .vercel
 .env*
+public/elections.json

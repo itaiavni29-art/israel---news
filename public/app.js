@@ -157,7 +157,7 @@ document.documentElement.classList.toggle('big-text', bigText());
 function sectionTabs(active = null) {
   const link = (href, label, on) => el('a', { href, 'aria-current': on ? 'page' : null }, label);
   return el('nav', { class: 'sections', 'aria-label': 'מדורים' },
-    link('#/', 'ראשי', active == null), (data?.categories ?? []).map(c => link(`#/topics/${c.id}`, c.name, active === c.id)));
+    link('#/', 'ראשי', active == null), link('#/elections', 'בחירות 2026', active === 'elections'), (data?.categories ?? []).map(c => link(`#/topics/${c.id}`, c.name, active === c.id)));
 }
 
 function updatedText() {
@@ -542,6 +542,58 @@ function maybeInstallGuide() {
   if (s.visits % 3 === 1) openInstallGuide();
 }
 
+// ---------- "בחירות 2026": the channels' polls, an average per party and a forecast (see src/elections.js) ----------
+let elections = null, electionsAt = 0;
+const dayMonth = iso => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
+async function electionsView() {
+  document.title = 'בחירות 2026: סקרים, ממוצע ותחזית · ' + BRAND;
+  if (!elections || now() - electionsAt > 10 * 60_000) {
+    try { const r = await fetch(dataUrl('elections.json'), { cache: 'no-store' }); if (r.ok) { elections = await r.json(); electionsAt = now(); } } catch { /* keep what we have */ }
+  }
+  const e = elections, top = [header(), sectionTabs('elections')];
+  const daysLeft = e ? Math.ceil((Date.parse(e.electionDay + 'T00:00:00+03:00') - now()) / 86400_000) : null;
+  const bar = el('div', { class: 'page-bar' }, el('h1', {}, 'בחירות 2026'),
+    daysLeft > 0 ? el('span', {}, 'עוד ', el('b', {}, daysLeft === 1 ? 'יום אחד' : `${daysLeft} ימים`), ' לבחירות') : daysLeft === 0 ? el('b', {}, 'היום יום הבחירות') : null);
+  if (!e) return [top, bar, el('main', { class: 'screen' }, empty('הסקרים עוד לא נטענו.', 'נסו שוב בעוד כמה דקות.'))];
+  if (e.silence) return [top, bar, el('main', { class: 'screen' }, empty('בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.', 'הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות.'))];
+
+  const parties = e.parties.filter(p => p.average > 0 || p.projected > 0).sort((a, b) => b.projected - a.projected || b.average - a.average);
+  const max = Math.max(...e.polls.flatMap(p => Object.values(p.seats)), 1);
+  const seatsBar = el('div', { class: 'seats-bar', role: 'img', 'aria-label': 'חלוקת 120 המנדטים לפי התחזית' },
+    parties.filter(p => p.projected).map(p => el('span', { style: `flex:${p.projected};background:${p.color}`, title: `${p.name} ${p.projected}` }, p.projected >= 5 ? p.projected : '')));
+  const bloc = (label, n, cls) => el('div', { class: 'bloc ' + cls }, el('b', {}, n), el('span', {}, label), el('div', { class: 'bloc-track' }, el('i', { style: `width:${Math.min(100, n / 120 * 100)}%` }), el('u', {})));
+
+  return [top, bar, el('main', { class: 'screen elections' },
+    el('section', { class: 'ai-summary', 'aria-label': 'תחזית' },
+      el('span', { class: 'ai-label' }, 'תחזית אוטומטית לפי ממוצע הסקרים'),
+      el('p', { class: 'body' }, e.forecast.text),
+      seatsBar,
+      el('ul', { class: 'legend' }, parties.filter(p => p.projected).map(p => el('li', {}, el('i', { style: `background:${p.color}` }), p.name, ' ', el('b', {}, p.projected)))),
+      bloc('מפלגות הממשלה היוצאת', e.blocs.government, e.blocs.government >= 61 ? 'win' : ''),
+      bloc('שאר המפלגות', e.blocs.others, e.blocs.others >= 61 ? 'win' : ''),
+      el('p', { class: 'ai-note' }, 'הקו מסמן 61 מנדטים, הרוב הדרוש בכנסת. התחזית מחושבת אוטומטית מהסקר האחרון של כל ערוץ ומנוסחת על ידי בינה מלאכותית. היא אינה תחזית מקצועית, וסקרים עלולים לטעות.')),
+
+    el('h2', { class: 'sub-head' }, 'כמה מנדטים נותן כל ערוץ'),
+    el('ul', { class: 'party-list' }, parties.map(p => el('li', { class: 'party' },
+      el('div', { class: 'party-head' }, el('i', { style: `background:${p.color}` }), el('h3', {}, p.name), p.gov ? el('span', { class: 'tag' }, 'בממשלה היוצאת') : null,
+        el('span', { class: 'avg' }, 'ממוצע ', el('b', {}, p.average))),
+      el('div', { class: 'channel-bars' }, e.polls.map(poll => { const n = poll.seats[p.key] ?? 0;
+        return el('div', { class: 'channel-bar' }, el('span', { class: 'who' }, poll.name),
+          el('div', { class: 'track' }, el('i', { style: `width:${n / max * 100}%;background:${p.color}` })),
+          n ? el('b', {}, n) : el('span', { class: 'under' }, 'לא עוברת'));
+      }))))),
+
+    el('h2', { class: 'sub-head' }, 'הסקרים שנכללו'),
+    el('ul', { class: 'source-list polls' }, e.polls.map(poll => el('li', {},
+      el('span', { class: 'src-tag' }, poll.name),
+      el('a', { class: 'source-item', href: safeUrl(poll.url ?? e.source.url), target: '_blank', rel: 'noopener noreferrer' },
+        el('h3', {}, `סקר המנדטים מ-${dayMonth(poll.date)}`),
+        el('span', { class: 'meta' }, poll.sample ? `${poll.sample} משיבים · ` : '', el('b', {}, 'לדיווח על הסקר ↗')))))),
+    el('p', { class: 'ai-note' }, 'הנתונים נלקחים מטבלת הסקרים של ',
+      el('a', { href: safeUrl(e.source.url), target: '_blank', rel: 'noopener noreferrer' }, e.source.name),
+      ', שמרכזת את הסקרים שפרסמו הערוצים. הממוצע הוא ממוצע פשוט של הסקר האחרון מכל ערוץ. עודכן: ', ago(e.updatedAt), '.'))];
+}
+
 // ---------- router ----------
 function setNav(key) {
   for (const a of document.querySelectorAll('.nav-item')) {
@@ -558,6 +610,7 @@ async function route({ refresh = true } = {}) {
   else if (hash === '#/live') { view = liveView(); nav = 'live'; }
   else if ((m = hash.match(/^#\/topics(?:\/(\w+))?$/))) { view = topicsView(m[1]); nav = 'topics'; }
   else if ((m = hash.match(/^#\/saved(\/history)?$/))) { view = savedView(m[1] ? 'history' : 'saved'); nav = 'saved'; }
+  else if (hash === '#/elections') view = await electionsView();
   else if (hash === '#/status') { view = await statusView(); nav = 'saved'; }
   else view = homeView();
   setNav(nav);

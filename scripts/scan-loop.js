@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { loadConfig, ROOT } from '../src/config.js';
 import { Scanner } from '../src/scanner.js';
 import { log } from '../src/log.js';
+import { updateElections } from '../src/elections.js';
 
 const dir = path.resolve(process.argv[2] ?? path.join(ROOT, 'data'));
 const loopMinutes = +(process.argv[3] ?? 330);
@@ -49,6 +50,7 @@ log.info(`[loop] scanning every ${config.scanIntervalMinutes} min for ${loopMinu
 while (Date.now() < deadline) {
   const started = Date.now();
   await scanner.scanOnce();
+  if (config.elections?.enabled) log.info('[elections] ' + await updateElections(dir, { config: config.elections, summarizer: scanner.summarizer, log }));
   publish();
   if (codeChanged()) { log.info('[loop] new code on main — handing over to a fresh job'); break; }
   const wait = Math.max(0, intervalMs - (Date.now() - started));

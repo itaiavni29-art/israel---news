@@ -1,0 +1,280 @@
+== Seat projections ==
+=== 2026 ===
+{{Sticky header}}
+{| class="wikitable sortable sticky-header-multi" style="text-align:center;font-size:90%;line-height:12px"
+! rowspan="2" class="unsortable" style="width:65px;" | Fieldwork<br />date
+! rowspan="2" style="width:110px;" | Polling firm
+! rowspan="2" style="width:110px;" | Publisher
+! rowspan="2" class="unsortable" style="width:40px;" | Sample<br />size
+! class="unsortable" style="width:40px; background:#D9D9F8;" | [[Likud]]
+! class="unsortable" style="width:40px; letter-spacing:-1px;" | [[Together (Israel)|Together]]
+! colspan="2" class="unsortable" style="width:40px; background:#D9D9F8;" | [[Religious Zionist Party|RZP]]-<br/>[[Zehut]]
+! class="unsortable" style="width:40px; background:#D9D9F8;" | [[Otzma Yehudit|Otzma]]
+! class="unsortable" style="width:40px;" | [[Blue and White (political party)|Blue & White]]
+! class="unsortable" style="width:40px; background:#D9D9F8;" | [[Shas]]
+! class="unsortable" style="width:40px; background:#D9D9F8;" | [[United Torah Judaism|UTJ]]
+! class="unsortable" style="width:40px; letter-spacing:-1px;" | [[Yisrael Beiteinu]]
+! class="unsortable" style="width:40px;" | [[Ra'am]]
+! class="unsortable" style="width:40px;" | [[Joint List]]
+! class="unsortable" style="width:40px;" | [[The Democrats (Israel)|Dems]]
+! class="unsortable" style="width:40px;" | [[Yashar (political party)|Yashar]]
+! colspan="2" class="unsortable" style="width:40px; letter-spacing:-1px;" | [[The Reservists (political party)|Reserv.]]-<br/>[[New Economic Party|NEP]]
+! class="unsortable" style="width:40px;" | {{small|[[Amcha Yisrael]]}}
+! class="unsortable" style="width:40px;" | [[Haredi Public]]
+! rowspan="2" class="unsortable" style="width:40px;" | Others
+! class="unsortable" style="width:40px; background:#D9D9F8;" | Gov.{{efn|name=GovWinter|This column shows the total for the 37th government parties. If a source includes any non-government party as a member of a Netanyahu-led bloc, the source's total for that bloc will differ from the figure shown in this column.}}
+|-
+! style="background:{{party color|Likud}}" |
+! style="background:{{party color|Together (Israel)}}" |
+! style="background:{{party color|Religious Zionist Party}}" |
+! style="background:{{party color|Zehut}}" |
+! style="background:{{party color|Otzma Yehudit}}" |
+! style="background:{{party color|Blue and White (political party)}}" |
+! style="background:{{party color|Shas}}" |
+! style="background:{{party color|United Torah Judaism}}" |
+! style="background:{{party color|Yisrael Beiteinu}}" |
+! style="background:{{party color|United Arab List}}" |
+! style="background:{{party color|Joint List}}" |
+! style="background:{{party color|The Democrats (Israel)}}" |
+! style="background:{{party color|Yashar (political party)}}" |
+! style="background:{{party color|The Reservists (political party)}}" |
+! style="background:{{party color|New Economic Party}}" |
+! style="background:#8301d2" |
+! style="background:#f5c518" |
+! style="background:#0000CD" |
+|-
+| style="font-style:italic;" {{Opdrts||16|Oct|2026}}
+| colspan="22" |''Deadline for submission of surplus-vote agreements to the Central Elections Committee''<ref>{{cite web |title=Pressure intensifies on Israel's smaller parties to merge or drop out of race|url=https://www.jns.org/news/israel-news/pressure-intensifies-on-israels-smaller-parties-to-merge-or-drop-out-of-race|website=[[Jerusalem News Syndicate]] |access-date=20 September 2026|date=6 September 2026 |author=David Israel}}</ref>
+|-
+|{{Opdrts||12|Oct|2026}}
+| style=background:DarkOrange |SF+ND
+|[[Channel 14 (Israel)|Channel 14]]<ref>{{cite web|date=12 October 2026|lang=en|title=Drama on the bloc map: This is the party that passes the threshold for the first time in Filbert's poll|url=https://ch10.co.il/en/news/1107207/|access-date=12 October 2026 |work=Haredim10}}</ref>
+|538
+|style="background:#BBCDE4" |'''29'''
+|7
+|colspan=2|7
+|7
+|{{small|(0.6%)}}
+|10
+|8
+|5
+|5
+|8
+|10
+|20
+|colspan=2|4
+|{{small|(2.9%)}}
+|{{small|(0.6%)}}
+|{{N/A}}
+|style="background:#b2b2f0" |'''61'''
+|-
+| {{Opdrts||11|Oct|2026}}
+| colspan="22" |[[Shas]] and [[United Torah Judaism]] sign a surplus-vote agreement<ref>{{Cite web|last1=Neev|first1=Keshet |date=11 October 2026 |title=Shas, UTJ sign surplus vote-sharing deal, pledge cooperation in next Knesset |url=https://www.jpost.com/israel-election-2026/article-911320 |access-date=11 October 2026|website=The Jerusalem Post}}</ref>
+|-
+|{{Opdrts|7|8|Oct|2026}}
+| style=background:#F86B61 |LRI+P4A
+|[[Maariv (newspaper)|''Maariv'']]<ref name="maariv8oct">{{cite news |title=מפלגת הליכוד מתחזקת - והקרב מול איזנקוט מתחמם {{!}} סקר המנדטים של מעריב  |work=[[Maariv (newspaper)|Maariv]] |url=https://www.maariv.co.il/news/politics/article-1375198|date=9 October 2026|access-date=9 October 2026|author=Moshe Cohen}}</ref>
+|700
+|20
+|13
+|colspan=2|6
+|8
+|{{small|(1.9%)}}
+|7
+|7
+|9
+|5
+|7
+|9
+|style="background:#d0eafb" |'''21'''
+|colspan=2|4
+|4
+|{{small|(0.8%)}}
+|0.9%{{efn|[[Noam (political party)|Noam]] at 0.6% <br/>[[Tzomet]]-[[Gadi Yevarkan|Beit Yisrael]] at 0.3% <br/>}}
+|48
+|-
+|{{Opdrts|7|8|Oct|2026}}
+| style=background:Turquoise |Yossi Tatika
+|''[[Zman Yisrael]]''<ref name="8OctYossi">{{Cite web |title= הבחירות יוכרעו בתחתית הטבלה |trans-title= |work=Zman Yisrael |date=8 October 2026 |url=https://www.zman.co.il/731622/ |language=he-IL}}</ref>
+|500
+|20
+|13
+|colspan=2|5
+|6
+|{{small|(1.2%)}}
+|8
+|8
+|10
+|5
+|9
+|8
+|style="background:#d0eafb" |'''24'''
+|colspan=2|{{small|(3.2%)}}
+|4
+|{{N/A}}
+|{{N/A}}
+|47
+|-
+|{{Opdrts|7|8|Oct|2026}}
+|style=background:Burlywood |Kantar
+|''[[Israel Hayom]]''<ref name="Kantar7oct">{{Cite web |title=עופר וינטר מתחת לאחוז החסימה, הנדל וזליכה יציבים {{!}} סקר מנדטים" |trans-title= |work=Israel Hayom |date=8 October 2026 |url=https://www.israelhayom.co.il/news/politics/article/21444759|language=he-IL|access-date=8 October 2026}}</ref>
+|555
+|21
+|13
+|colspan=2|6
+|9
+|{{small|(1.2%)}}
+|7
+|8
+|8
+|5
+|8
+|8
+|style=background:#d0eafb|'''22'''
+|colspan=2|5
+|{{small|(2.9%)}}
+|{{N/A}}
+|{{N/A}}
+|51
+|-
+|{{Opdrts||7|Oct|2026}}
+|style=background:yellow |Direct Polls
+| [[i24NEWS (Israeli TV channel)|i24 News]]<ref>{{Cite web |title=סקר מנדטים דרמטי של i24NEWS: נתניהו ואיזנקוט בירידה, בנט מתחזק {{!}} הנתונים המלאים|work=i24 News |date=8 October 2026|url=https://www.i24news.tv/he/news/israel-elections-2026/polls/artc-fa0f56f4|lang=he-IL|access-date=9 October 2026 }}</ref>
+|504
+| style="background:#BBCDE4" |'''26'''
+|11
+|colspan=2|6
+|9
+|{{small|(<1%)}}
+|7
+|8
+|7
+|5
+|7
+|10
+|20
+|colspan=2|{{small|2.3%}}
+|4
+|{{small|(<1%)}}
+|{{small|(<4%)}}{{efn|[[Haim Yosef Abergel|Ahi]] at <1%,<br/>  [[Jerusalem Faction|Code Black]] at <1%,<br/> [[Israel First (political party)|Israel First]]-[[Ale Yarok]] at <1%, <br/> and [[Noam (political party)|Noam]] at <1%.}}
+|56
+|-
+|{{Opdrts||7|Oct|2026}}
+| style=background:DarkOrange |SF+ND
+|[[Channel 14 (Israel)|Channel 14]]<ref name=Filber7octp>{{cite web|date=7 October 2026|lang=he-IL|title=סקר חדשות 14: איזנקוט מצמצם דרמטית את הפער מנתניהו|url=https://www.c14.co.il/article/1728516|access-date=8 October 2026 |work=Channel 14}}</ref>
+|2175
+|style="background:#BBCDE4" |'''31'''
+|8
+|colspan=2|6
+|8
+|{{small|(1.3%)}}
+|10
+|8
+|5
+|5
+|7
+|9
+|23
+|colspan=2|{{small|(1.8%)}}
+|{{small|(2.2%)}}
+|{{small|(0.4%)}}
+|1.0%{{efn|[[Noam (political party)|Noam]] at 0.9% <br/> [[Haim Yosef Abergel|Ahi]] at 0.1%}}
+|style="background:#b2b2f0" |'''63'''
+|-
+|{{Opdrts||7|Oct|2026}}
+| style="background:mediumseagreen" |MP+TM+SN+A
+| [[Channel 13 (Israel)|Channel 13]]<ref>{{Cite web |title=שוויון בין נתניהו לאיזנקוט בצמרת - וגוש הקואליציה מגדיל את הפער |trans-title=Equality between Netanyahu and Eisenkot at the top - and the coalition bloc increases the gap |publisher=Channel 13 |date=7 October 2026 |access-date=8 October 2026 |url=https://13tv.co.il/item/news/politics/politics/survey-905386103/?pid=985778 |language=he-IL }}</ref>
+|1013
+|style="background:#BBCDE4" |'''20'''
+|12
+|colspan=2|7
+|8
+|{{small|(0.8%)}}
+|7
+|8
+|8
+|6
+|9
+|10
+|style="background:#d0eafb" |'''20'''
+|colspan=2|{{small|(2.9%)}}
+|5
+|{{small|(1.1%)}}
+|{{N/A}}
+|50
+|-
+| {{Opdrts||6|Oct|2026}}
+| colspan="22" |[[Likud]] and [[Religious Zionist Party | RZP-Zehut]] sign a surplus-vote agreement<ref>{{Cite web |date=6 October 2026 |title=Likud and Religious Zionism sign surplus-vote agreement |url=https://www.timesofisrael.com/liveblog_entry/likud-and-religious-zionism-sign-surplus-vote-agreement/ |access-date=7 October 2026|website=The Times of Israel}}</ref>
+|-
+|{{Opdrts||5|Oct|2026}}
+|style=background:#FFDFCC |Midgam R&C
+|[[HaHadashot 12]]<ref>{{Cite web |title=סקר המנדטים של חדשות 12: וינטר מתרסק מתחת לאחוז החסימה, האופוזיציה מתחזקת |trans-title=News 12 Mandates poll: Winter crashes below the electoral threshold, the opposition is strengthening |publisher=Channel 12 |date=5 October 2026 |access-date=6 October 2026 | url=https://www.mako.co.il/news-israel-elections/2026/Article-d7459e0cc7c01a1026.htm |language=he-IL}}</ref>
+|501
+|21
+|13
+|colspan=2|6
+|7
+|{{small|(0.5%)}}
+|7
+|8
+|9
+|5
+|8
+|9
+|style="background:#d0eafb" |'''23'''
+|colspan=2|4
+|{{small|(1.5%)}}
+|{{small|(0.6%)}}
+|{{N/A}}
+|49
+|-
+|{{Opdrts||4|Oct|2026}}
+| style=background:Burlywood |Kantar
+|[[Kan 11]]<ref>{{cite web |title=סקר כאן חדשות: וינטר מתחת לאחוז החסימה, המשותפת מתחזקת |trans-title=Kan News Poll: Winter Below Electoral Threshold, Joint List Gains Strength |publisher=[[Kan 11]] |date=4 October 2026 |url=https://www.kan.org.il/content/kan-news/politic/1105927/ |language=he-il |access-date=4 October 2026}}</ref>
+|553
+|21
+|12
+|colspan=2|6
+|8
+|{{small|(1.3%)}}
+|8
+|8
+|9
+|5
+|8
+|8
+|style="background:#d0eafb" |'''23'''
+|colspan=2|4
+|{{small|(2.6%)}}
+|{{small|(0.9%)}}
+|{{small|(1.3%)}}
+|51
+|-
+| {{Opdrts||2|Oct|2026}}
+| colspan="22" |The Supreme Court overturns the decision to disqualify [[Joint List]], [[Ra'am]] and [[Ofer Cassif]]<ref>{{Cite web |url=https://www.jpost.com/israel-election-2026/article-910410 |access-date=3 October 2026 |work=The Jerusalem Post|title=Supreme Court allows Ofer Cassif, Ra'am, Joint List to run in 26th Knesset election|date=2 October 2026|author=Yoav Etiel}}</ref>
+|-
+| {{Opdrts||2|Oct|2026}}
+| colspan="22" |[[Sami Abu Shehadeh]] submits his withdrawal to the Central Elections Committee after being advised to do so by the Supreme Court<ref>{{Cite web |url=https://www.jpost.com/israel-election-2026/article-910422 |access-date=2 October 2026 |website=The Jerusalem Post|title=Abu Shehadeh withdraws after Supreme Court signals disqualification|date=2 October 2026|author=Sarah Ben-Nun}}</ref>
+|-
+|{{Opdrts||1|Oct|2026}}
+|style=background:yellow |Direct Polls
+| [[i24NEWS (Israeli TV channel)|i24 News]]<ref>{{Cite web |title=i24 Channel: Likud strengthened at Smotrich's expense, Arabs with 13, Leitner does not rise from 0|work=Haredim 10 |date=2 October 2026|url=https://ch10.co.il/en/news/1105029/|lang=en|access-date=3 October 2026 }}</ref>
+|504
+| style="background:#BBCDE4" |'''28'''
+|9
+|colspan=2|5
+|8
+|{{n/a}}
+|7
+|8
+|7
+|5
+|8
+|9
+|22
+|colspan=2|{{small|(1.81%)}}
+|4
+|{{n/a}}
+|{{N/A}}{{efn|[[Haim Yosef Abergel|Ahi]], [[Jerusalem Faction|Black Ink]], [[Israel First (political party)|Israel First]] and [[Noam (political party)|Noam]] are below the threshold}}
+|56
+|}

@@ -220,5 +220,8 @@
     }
   ],
   "leadMinSources": 3,
-  "leadHoldMinutes": 120
+  "leadHoldMinutes": 120,
+  "elections": {
+    "enabled": true
+  }
 }

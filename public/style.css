@@ -296,3 +296,31 @@ html, body { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-siz
 a, button, input, .story, .lead, .topic-tile, .chip { touch-action: manipulation; }
 /* No hover/touch decoration on headlines: nothing changes until a story is actually tapped. */
 a, button { -webkit-tap-highlight-color: transparent; }
+
+/* ---------- בחירות 2026 ---------- */
+.elections .seats-bar { display: flex; height: 34px; border-radius: var(--radius-md); overflow: hidden; margin-top: 6px; direction: rtl; }
+.elections .seats-bar span { min-width: 2px; color: #fff; font-size: 13px; font-weight: 700; line-height: 34px; text-align: center; border-inline-start: 1px solid #fff; }
+.elections .seats-bar span:first-child { border: 0; }
+.elections .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.elections .legend i, .party-head i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-end: 5px; }
+.elections .legend b { color: var(--ink); }
+.bloc { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 8px; margin-top: 6px; font-size: 14px; color: var(--muted); }
+.bloc > b { font-size: 26px; font-weight: 900; color: var(--ink); }
+.bloc.win > b { color: var(--brand); }
+.bloc-track { grid-column: 1 / -1; position: relative; height: 12px; background: var(--soft); border-radius: 6px; }
+.bloc-track i { position: absolute; inset-block: 0; inset-inline-start: 0; background: var(--rail); border-radius: 6px; }
+.bloc.win .bloc-track i { background: var(--brand); }
+.bloc-track u { position: absolute; inset-block: -4px; inset-inline-start: calc(61 / 120 * 100%); width: 2px; background: var(--live); }
+.party-list, .channel-bars { margin: 0; padding: 0; list-style: none; }
+.party { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.party-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.party-head h3 { font-size: 18px; font-weight: 900; }
+.party-head .tag { padding: 2px 7px; background: var(--brand-soft); color: var(--brand); font-size: 11px; font-weight: 700; border-radius: 3px; }
+.party-head .avg { margin-inline-start: auto; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.party-head .avg b { font-size: 22px; font-weight: 900; color: var(--ink); }
+.channel-bar { display: grid; grid-template-columns: 74px 1fr 62px; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; color: var(--muted); }
+.channel-bar .track { height: 12px; background: var(--soft); border-radius: 6px; overflow: hidden; }
+.channel-bar .track i { display: block; height: 100%; border-radius: 6px; }
+.channel-bar b { color: var(--ink); font-size: 15px; }
+.channel-bar .under { font-size: 11px; color: var(--faint); }
+.elections .ai-note a { color: inherit; }
