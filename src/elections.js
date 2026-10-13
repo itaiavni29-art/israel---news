@@ -233,7 +233,7 @@ export async function updateElections(dir, { config = {}, summarizer = null, log
     const summary = summarize(table, names, { now, maxPollAgeDays: cfg.maxPollAgeDays });
     if (summary.polls.length < 2) throw new Error(`only ${summary.polls.length} recent channel polls found`);
     const fingerprint = JSON.stringify(summary.polls.map(p => [p.channel, p.date, p.seats]));
-    const forecast = last?.fingerprint === fingerprint && last.forecast ? last.forecast : { ...(await writeForecast(summary, summarizer, log)), at: now };
+    const forecast = last?.fingerprint === fingerprint && last.forecast?.model ? last.forecast : { ...(await writeForecast(summary, summarizer, log)), at: now };
     write(file, { ...base, updatedAt: last?.fingerprint === fingerprint ? last.updatedAt : now, checkedAt: now, channels: CHANNELS.map(c => ({ id: c.id, name: c.name })),
       ...summary, forecast, names, fingerprint });
     return `${summary.polls.length} channels, leader ${summary.leader?.name} ${summary.leader?.seats}, government ${summary.blocs.government}`;
