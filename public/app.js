@@ -542,6 +542,35 @@ function maybeInstallGuide() {
   if (s.visits % 3 === 1) openInstallGuide();
 }
 
+// A one-time announcement of the new elections section: what it is and where to find it.
+// Shown once per device (remembered in localStorage), and not at all once the legal poll-silence period begins.
+const NEWS_ELECTIONS = 'in:news-elections', NEWS_UNTIL = Date.parse('2026-10-23T00:00:00+03:00');
+function maybeElectionsNews() {
+  if (now() >= NEWS_UNTIL || location.hash === '#/elections' || document.querySelector('.guide')) return false;
+  try { if (localStorage.getItem(NEWS_ELECTIONS)) return false; localStorage.setItem(NEWS_ELECTIONS, '1'); } catch { return false; } // cannot remember → never nag
+  const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
+  const box = el('section', { class: 'guide news', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'news-title' },
+    el('div', { class: 'guide-head' },
+      el('div', {}, el('span', { class: 'news-tag' }, 'חדש באתר'), el('h2', { id: 'news-title' }, 'מדור בחירות 2026'),
+        el('p', {}, 'כל סקרי המנדטים של ערוצי הטלוויזיה במקום אחד, לקראת הבחירות ב־27 באוקטובר.')),
+      el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
+    el('ul', { class: 'news-points' },
+      el('li', {}, el('b', {}, 'התחזית של זמן אמת: '), 'מי המפלגה הגדולה הצפויה, ובכמה מנדטים.'),
+      el('li', {}, el('b', {}, 'גרף לכל מפלגה: '), 'כמה נותנים לה חדשות 12, רשת 13, כאן 11, ערוץ 14 ו־i24NEWS, והממוצע.'),
+      el('li', {}, el('b', {}, 'מתעדכן כל יום, '), 'עם כל סקר חדש שמתפרסם.')),
+    el('div', { class: 'news-where' },
+      el('p', {}, 'איך נכנסים? בשורת המדורים שמתחת לכותרת, מיד אחרי "ראשי":'),
+      el('div', { class: 'news-strip', 'aria-hidden': 'true' }, el('span', {}, 'ראשי'), el('span', { class: 'on' }, 'בחירות 2026'), el('span', {}, 'פוליטיקה'), el('span', {}, 'ביטחון'))),
+    el('div', { class: 'guide-actions' },
+      el('button', { class: 'guide-btn primary', type: 'button', onclick: () => { close(); location.hash = '#/elections'; } }, 'למדור הבחירות'),
+      el('button', { class: 'guide-btn', type: 'button', onclick: close }, 'אחר כך')));
+  document.body.append(backdrop, box);
+  document.addEventListener('keydown', onKey);
+  return true;
+}
+
 // ---------- "בחירות 2026": the channels' polls, an average per party and a forecast (see src/elections.js) ----------
 let elections = null, electionsAt = 0;
 const dayMonth = iso => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
@@ -674,7 +703,7 @@ async function checkAppVersion() {
 // Pull new events automatically: every 30 s, and right away when the page comes back into view
 // (switching tabs, unlocking the phone, reopening the home-screen app, reconnecting).
 await route();
-maybeInstallGuide();
+if (!maybeElectionsNews()) maybeInstallGuide();
 checkAppVersion();
 setInterval(tick, REFRESH_MS);
 setInterval(checkAppVersion, 10 * 60_000);

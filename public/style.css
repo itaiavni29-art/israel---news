@@ -340,3 +340,17 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .forecast .legend b { color: #fff; }
 .forecast-note { font-size: 12px; line-height: 1.5; color: var(--on-dark-muted); }
 .sub-head.first { margin-top: 0; border-top: 0; }
+
+/* the one-time announcement of a new section */
+.news-tag { display: inline-block; margin-bottom: 6px; padding: 3px 9px; background: var(--live); color: #fff; font-size: 12px; font-weight: 700; border-radius: 3px; }
+.guide.news .guide-head h2 { font-size: 26px; }
+.guide.news .guide-head p { font-size: 15px; }
+.news-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+.news-points li { padding-inline-start: 18px; position: relative; }
+.news-points li::before { content: ""; position: absolute; inset-inline-start: 0; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+.news-points b { color: var(--ink); }
+.news-where { padding: 12px; background: var(--soft); border-radius: var(--radius-lg); }
+.news-where p { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.news-strip { display: flex; gap: 18px; padding: 0 12px; background: var(--surface); border-radius: var(--radius-md); overflow: hidden; white-space: nowrap; font-size: 16px; }
+.news-strip span { padding: 11px 0 8px; border-bottom: 3px solid transparent; }
+.news-strip .on { color: var(--brand); font-weight: 700; border-bottom-color: var(--brand); box-shadow: 0 0 0 6px var(--brand-soft); background: var(--brand-soft); border-radius: 4px 4px 0 0; }
