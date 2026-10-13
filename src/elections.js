@@ -5,7 +5,7 @@
 // channel's own report. We never fetch the channels' pages. Published as <publishDir>/elections.json:
 //   polls     the latest poll of each channel (seats per party, date, link to the channel's report)
 //   parties   name, colour, whether it is in the outgoing government, average seats, projected seats
-//   forecast  blocs against the 61 needed, and a short text written by the model from these numbers only
+//   forecast  a short text written by the model from these numbers only: who leads and by how much
 // Israeli law (חוק הבחירות (דרכי תעמולה), 16ה) forbids publishing polls from the Friday before election day
 // until the polls close: during that window the file carries no numbers at all.
 import fs from 'node:fs';
@@ -157,33 +157,39 @@ export function summarize(table, names = {}, { now = Date.now(), maxPollAgeDays 
 
 // ---------- the forecast text ----------
 const PROMPT = `אתה פרשן סקרים זהיר. לפניך ממוצע של סקרי המנדטים האחרונים שפרסמו ערוצי הטלוויזיה בישראל לקראת הבחירות לכנסת.
-כתוב תחזית קצרה בעברית: 3 עד 4 משפטים, עד 80 מילים.
+כתוב תחזית קצרה בעברית: 2 משפטים, עד 40 מילים.
 כללים:
 - השתמש רק במספרים ובשמות שמופיעים בנתונים שלמטה. אל תוסיף מספרים, שמות של אנשים, סיבות או אירועים.
-- ציין איזו מפלגה צפויה להיות הגדולה, כמה מנדטים מקבלות מפלגות הממשלה היוצאת וכמה שאר המפלגות, ומה זה אומר ביחס ל-61 המנדטים הדרושים לרוב.
-- הדגש שזו הערכה לפי סקרים בלבד, שסקרים עלולים לטעות ושמפלגות קרובות לאחוז החסימה יכולות לשנות את התמונה.
+- ציין איזו מפלגה צפויה להיות הגדולה ובכמה מנדטים, מי אחריה ומה הפער ביניהן.
+- אל תכתוב על ממשלה, קואליציה, אופוזיציה או גושים.
 - כתוב בניסוח ניטרלי, בלי לתמוך באף צד. בלי כותרת, בלי רשימות ובלי הדגשות.`;
 
-export function fallbackText({ leader, blocs }) {
-  const g = blocs.government, o = blocs.others;
-  const verdict = g >= 61 ? `למפלגות הממשלה היוצאת יש רוב של ${g} מנדטים` : o >= 61 ? `מפלגות הממשלה היוצאת מקבלות ${g} מנדטים, פחות מ-61 הדרושים לרוב, ושאר המפלגות מקבלות יחד ${o}` : `אף צד לא מגיע ל-61 מנדטים (${g} מול ${o})`;
-  return `לפי ממוצע הסקרים האחרונים, המפלגה הגדולה צפויה להיות ${leader.name}, עם ${leader.seats} מנדטים. ${verdict}. זו הערכה לפי סקרים בלבד: סקרים עלולים לטעות, ומפלגות שקרובות לאחוז החסימה יכולות לשנות את התמונה.`;
+/** The two biggest parties of the forecast and the gap between them. */
+export function race(summary) {
+  const [first, second] = [...summary.parties].sort((a, b) => b.projected - a.projected);
+  return { first, second, gap: first.projected - second.projected };
+}
+export function fallbackText(summary) {
+  const { first, second, gap } = race(summary);
+  return gap === 0 ? `לפי ממוצע הסקרים האחרונים, ${first.name} ו${second.name} צמודות בראש, עם ${first.projected} מנדטים כל אחת.`
+    : `לפי ממוצע הסקרים האחרונים, המפלגה הגדולה צפויה להיות ${first.name}, עם ${first.projected} מנדטים. אחריה ${second.name} עם ${second.projected}, פער של ${gap === 1 ? 'מנדט אחד' : gap + ' מנדטים'}.`;
 }
 /** The model's text is accepted only if it is clean Hebrew and every number in it comes from the data. */
 export function checkForecast(text, summary) {
   const words = text.split(/\s+/).length;
-  if (words < 20 || words > 110) return 'length';
+  if (words < 10 || words > 60) return 'length';
+  if (/ממשל|קואליצי|אופוזיצי|גוש/.test(text)) return 'blocs';
   if (spellingProblem(text)) return 'spelling';
-  const allowed = new Set([61, 120, 3.25, summary.blocs.government, summary.blocs.others, summary.polls.length, ...summary.parties.flatMap(p => [p.projected, p.average])].map(String));
+  const allowed = new Set([120, race(summary).gap, summary.polls.length, ...summary.parties.flatMap(p => [p.projected, p.average])].map(String));
   for (const n of text.match(/\d+(?:\.\d+)?/g) ?? []) if (!allowed.has(n)) return 'number ' + n;
   return null;
 }
 async function writeForecast(summary, summarizer, log) {
   if (!summarizer?.enabled) return { text: fallbackText(summary), model: null };
   const facts = [`מספר הערוצים בממוצע: ${summary.polls.length}`,
-    ...summary.parties.filter(p => p.projected > 0).sort((a, b) => b.projected - a.projected).map(p => `${p.name}: ${p.projected} מנדטים${p.gov ? ' (מפלגה בממשלה היוצאת)' : ''}`),
+    ...summary.parties.filter(p => p.projected > 0).sort((a, b) => b.projected - a.projected).map(p => `${p.name}: ${p.projected} מנדטים`),
     `מתחת לאחוז החסימה: ${summary.parties.filter(p => !p.projected).map(p => p.name).join(', ') || 'אין'}`,
-    `סך מפלגות הממשלה היוצאת: ${summary.blocs.government}`, `סך שאר המפלגות: ${summary.blocs.others}`, 'דרושים לרוב: 61 מתוך 120'].join('\n');
+    `הפער בין שתי המפלגות הגדולות: ${race(summary).gap}`].join('\n');
   try {
     for (const m of await summarizer.discoverModels()) {
       if (!summarizer.canUse(m, Date.now())) continue;
@@ -232,10 +238,10 @@ export async function updateElections(dir, { config = {}, summarizer = null, log
     if (need.some(t => !names[t])) Object.assign(names, await hebrewNames(need, fetchImpl).catch(() => ({})));
     const summary = summarize(table, names, { now, maxPollAgeDays: cfg.maxPollAgeDays });
     if (summary.polls.length < 2) throw new Error(`only ${summary.polls.length} recent channel polls found`);
-    const fingerprint = JSON.stringify(summary.polls.map(p => [p.channel, p.date, p.seats]));
+    const fingerprint = 'v2' + JSON.stringify(summary.polls.map(p => [p.channel, p.date, p.seats]));
     const forecast = last?.fingerprint === fingerprint && last.forecast?.model ? last.forecast : { ...(await writeForecast(summary, summarizer, log)), at: now };
     write(file, { ...base, updatedAt: last?.fingerprint === fingerprint ? last.updatedAt : now, checkedAt: now, channels: CHANNELS.map(c => ({ id: c.id, name: c.name })),
-      ...summary, forecast, names, fingerprint });
-    return `${summary.polls.length} channels, leader ${summary.leader?.name} ${summary.leader?.seats}, government ${summary.blocs.government}`;
+      polls: summary.polls, parties: summary.parties.map(({ gov, ...p }) => p), leader: summary.leader, forecast, names, fingerprint });
+    return `${summary.polls.length} channels, leader ${summary.leader?.name} ${summary.leader?.seats}`;
   } catch (e) { log.warn?.('[elections] ' + e.message); return 'failed: ' + e.message; }
 }

@@ -47,4 +47,5 @@ test('the forecast text may only use numbers from the data', () => {
   const s = summarize(parsePolls(wikitext), {}, { now: NOW });
   assert.equal(checkForecast(fallbackText(s), s), null);
   assert.match(checkForecast(fallbackText(s).replace(String(s.leader.seats), '37'), s), /^number 37/);
+  assert.equal(checkForecast(fallbackText(s) + ' הקואליציה מתחזקת.', s), 'blocs', 'nothing about government or blocs');
 });

@@ -298,24 +298,16 @@ a, button, input, .story, .lead, .topic-tile, .chip { touch-action: manipulation
 a, button { -webkit-tap-highlight-color: transparent; }
 
 /* ---------- בחירות 2026 ---------- */
-.elections .seats-bar { display: flex; height: 34px; border-radius: var(--radius-md); overflow: hidden; margin-top: 6px; direction: rtl; }
-.elections .seats-bar span { min-width: 2px; color: #fff; font-size: 13px; font-weight: 700; line-height: 34px; text-align: center; border-inline-start: 1px solid #fff; }
-.elections .seats-bar span:first-child { border: 0; }
-.elections .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
-.elections .legend i, .party-head i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-end: 5px; }
-.elections .legend b { color: var(--ink); }
-.bloc { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 8px; margin-top: 6px; font-size: 14px; color: var(--muted); }
-.bloc > b { font-size: 26px; font-weight: 900; color: var(--ink); }
-.bloc.win > b { color: var(--brand); }
-.bloc-track { grid-column: 1 / -1; position: relative; height: 12px; background: var(--soft); border-radius: 6px; }
-.bloc-track i { position: absolute; inset-block: 0; inset-inline-start: 0; background: var(--rail); border-radius: 6px; }
-.bloc.win .bloc-track i { background: var(--brand); }
-.bloc-track u { position: absolute; inset-block: -4px; inset-inline-start: calc(61 / 120 * 100%); width: 2px; background: var(--live); }
+.seats-bar { display: flex; height: 34px; border-radius: var(--radius-md); overflow: hidden; margin-top: 6px; direction: rtl; }
+.seats-bar span { min-width: 2px; color: #fff; font-size: 13px; font-weight: 700; line-height: 34px; text-align: center; border-inline-start: 1px solid #fff; }
+.seats-bar span:first-child { border: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.legend i, .party-head i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-end: 5px; }
+.legend b { color: var(--ink); }
 .party-list, .channel-bars { margin: 0; padding: 0; list-style: none; }
 .party { padding: 14px 0; border-bottom: 1px solid var(--line); }
 .party-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .party-head h3 { font-size: 18px; font-weight: 900; }
-.party-head .tag { padding: 2px 7px; background: var(--brand-soft); color: var(--brand); font-size: 11px; font-weight: 700; border-radius: 3px; }
 .party-head .avg { margin-inline-start: auto; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .party-head .avg b { font-size: 22px; font-weight: 900; color: var(--ink); }
 .channel-bar { display: grid; grid-template-columns: 74px 1fr 62px; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; color: var(--muted); }
@@ -324,3 +316,27 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .channel-bar b { color: var(--ink); font-size: 15px; }
 .channel-bar .under { font-size: 11px; color: var(--faint); }
 .elections .ai-note a { color: inherit; }
+
+/* the forecast: the page's headline panel */
+.forecast { padding: 22px var(--gutter) 20px; background: var(--night); color: #fff; }
+.forecast-label { display: inline-block; padding: 4px 10px; background: var(--live); font-size: 13px; font-weight: 700; border-radius: 3px; }
+.forecast-kicker { margin-top: 16px; font-size: 15px; color: var(--on-dark-muted); }
+.forecast-winner { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 4px; }
+.forecast-winner h2 { font-size: 46px; font-weight: 900; line-height: 1.05; }
+.forecast-seats { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 108px; height: 108px; border-radius: 50%; border: 4px solid #fff; }
+.forecast-seats b { font-size: 46px; font-weight: 900; line-height: 1; }
+.forecast-seats span { font-size: 13px; font-weight: 700; }
+.forecast-next { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+.forecast-next li { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 6px; padding: 10px; background: rgba(255, 255, 255, .1); border-radius: var(--radius-md); }
+.forecast-next .place { grid-column: 1 / -1; font-size: 12px; color: var(--on-dark-muted); }
+.forecast-next .place::before { content: "מקום "; }
+.forecast-next i { width: 10px; height: 10px; border-radius: 50%; }
+.forecast-next .name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forecast-next b { grid-column: 1 / -1; font-size: 28px; font-weight: 900; line-height: 1.1; }
+.forecast-text { margin-top: 18px; font-size: 19px; font-weight: 500; line-height: 1.6; }
+.forecast .seats-bar { margin-top: 18px; }
+.forecast .seats-bar span { border-color: var(--night); }
+.forecast .legend { color: var(--on-dark-muted); }
+.forecast .legend b { color: #fff; }
+.forecast-note { font-size: 12px; line-height: 1.5; color: var(--on-dark-muted); }
+.sub-head.first { margin-top: 0; border-top: 0; }

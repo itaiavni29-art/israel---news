@@ -561,21 +561,26 @@ async function electionsView() {
   const max = Math.max(...e.polls.flatMap(p => Object.values(p.seats)), 1);
   const seatsBar = el('div', { class: 'seats-bar', role: 'img', 'aria-label': 'חלוקת 120 המנדטים לפי התחזית' },
     parties.filter(p => p.projected).map(p => el('span', { style: `flex:${p.projected};background:${p.color}`, title: `${p.name} ${p.projected}` }, p.projected >= 5 ? p.projected : '')));
-  const bloc = (label, n, cls) => el('div', { class: 'bloc ' + cls }, el('b', {}, n), el('span', {}, label), el('div', { class: 'bloc-track' }, el('i', { style: `width:${Math.min(100, n / 120 * 100)}%` }), el('u', {})));
+  const [first, ...rest] = parties, podium = rest.slice(0, 3);
 
-  return [top, bar, el('main', { class: 'screen elections' },
-    el('section', { class: 'ai-summary', 'aria-label': 'תחזית' },
-      el('span', { class: 'ai-label' }, 'תחזית אוטומטית לפי ממוצע הסקרים'),
-      el('p', { class: 'body' }, e.forecast.text),
+  return [top, bar,
+    el('section', { class: 'forecast', 'aria-label': 'התחזית' },
+      el('span', { class: 'forecast-label' }, 'התחזית של זמן אמת'),
+      el('p', { class: 'forecast-kicker' }, 'המפלגה הגדולה הצפויה'),
+      el('div', { class: 'forecast-winner' },
+        el('h2', {}, first.name),
+        el('div', { class: 'forecast-seats', style: `background:${first.color}` }, el('b', {}, first.projected), el('span', {}, 'מנדטים'))),
+      el('ol', { class: 'forecast-next', 'aria-label': 'המפלגות הבאות' }, podium.map((p, i) => el('li', {},
+        el('span', { class: 'place' }, i + 2), el('i', { style: `background:${p.color}` }), el('span', { class: 'name' }, p.name), el('b', {}, p.projected)))),
+      el('p', { class: 'forecast-text' }, e.forecast.text),
       seatsBar,
       el('ul', { class: 'legend' }, parties.filter(p => p.projected).map(p => el('li', {}, el('i', { style: `background:${p.color}` }), p.name, ' ', el('b', {}, p.projected)))),
-      bloc('מפלגות הממשלה היוצאת', e.blocs.government, e.blocs.government >= 61 ? 'win' : ''),
-      bloc('שאר המפלגות', e.blocs.others, e.blocs.others >= 61 ? 'win' : ''),
-      el('p', { class: 'ai-note' }, 'הקו מסמן 61 מנדטים, הרוב הדרוש בכנסת. התחזית מחושבת אוטומטית מהסקר האחרון של כל ערוץ ומנוסחת על ידי בינה מלאכותית. היא אינה תחזית מקצועית, וסקרים עלולים לטעות.')),
+      el('p', { class: 'forecast-note' }, `מחושב אוטומטית מהסקר האחרון של ${e.polls.length} ערוצים ומנוסח על ידי בינה מלאכותית. זו הערכה ולא תחזית מקצועית: סקרים עלולים לטעות, ומפלגות שקרובות לאחוז החסימה יכולות לשנות את התמונה.`)),
+    el('main', { class: 'screen elections' },
 
-    el('h2', { class: 'sub-head' }, 'כמה מנדטים נותן כל ערוץ'),
+    el('h2', { class: 'sub-head first' }, 'כמה מנדטים נותן כל ערוץ'),
     el('ul', { class: 'party-list' }, parties.map(p => el('li', { class: 'party' },
-      el('div', { class: 'party-head' }, el('i', { style: `background:${p.color}` }), el('h3', {}, p.name), p.gov ? el('span', { class: 'tag' }, 'בממשלה היוצאת') : null,
+      el('div', { class: 'party-head' }, el('i', { style: `background:${p.color}` }), el('h3', {}, p.name),
         el('span', { class: 'avg' }, 'ממוצע ', el('b', {}, p.average))),
       el('div', { class: 'channel-bars' }, e.polls.map(poll => { const n = poll.seats[p.key] ?? 0;
         return el('div', { class: 'channel-bar' }, el('span', { class: 'who' }, poll.name),
