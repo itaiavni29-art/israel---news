@@ -354,3 +354,92 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .news-strip { display: flex; gap: 18px; padding: 0 12px; background: var(--surface); border-radius: var(--radius-md); overflow: hidden; white-space: nowrap; font-size: 16px; }
 .news-strip span { padding: 11px 0 8px; border-bottom: 3px solid transparent; }
 .news-strip .on { color: var(--brand); font-weight: 700; border-bottom-color: var(--brand); box-shadow: 0 0 0 6px var(--brand-soft); background: var(--brand-soft); border-radius: 4px 4px 0 0; }
+
+/* ==========================================================================
+   Computers (wide screens). Everything above is the phone layout and stays as it is;
+   from 1000px the same pages get a wide shell, the navigation moves into the blue
+   header, the home page shows the lead story beside the list, and text grows.
+   ========================================================================== */
+@media (min-width: 1000px) {
+  :root { --gutter: 32px; }
+  body { font-size: 16px; }
+  .shell { max-width: 1180px; padding-bottom: 56px; }
+  body[data-screen="event"] .shell { padding-bottom: 120px; }
+
+  /* header: logo on the right, the four screens in the middle, search on the left */
+  .app-header { height: 72px; padding: 0 20px; grid-template-columns: 44px auto 1fr 44px; column-gap: 12px; }
+  .app-header > .icon-btn:last-child { grid-column: 4; }
+  .brand { justify-self: start; }
+  .brand-mark { width: 28px; height: 28px; }
+  .brand-name { font-size: 32px; }
+  .app-header.live { padding: 0 var(--gutter); }
+  .bottom-nav, body[data-screen="event"] .bottom-nav {
+    display: flex; top: 0; bottom: auto; width: auto; max-width: none; height: 72px; padding: 0; gap: 6px;
+    background: none; border: 0;
+  }
+  .nav-item { flex: none; flex-direction: row; gap: 8px; padding: 9px 16px; border-radius: 999px; color: rgba(255, 255, 255, .85); font-size: 16px; font-weight: 700; }
+  .nav-item .icon { width: 20px; height: 20px; }
+  .nav-item:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+  .nav-item[aria-current="page"], .nav-item[data-nav="live"][aria-current="page"] { background: #fff; color: var(--brand); }
+  .nav-item[data-nav="live"][aria-current="page"] { color: var(--live); }
+  .nav-item:focus-visible { outline-color: #fff; }
+
+  .sections { gap: 34px; }
+  .sections a { padding: 16px 0 13px; font-size: 18px; }
+  .sections a:hover { color: var(--brand); }
+  .page-bar { min-height: 52px; font-size: 16px; }
+  .page-bar h1 { font-size: 24px; }
+  .live-strip { min-height: 52px; }
+  .live-strip time, .live-strip .update { font-size: 17px; }
+
+  /* home: the lead story on the right, the other events beside it */
+  .screen { padding: 28px var(--gutter) 32px; }
+  .screen.home { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 44px; align-items: start; padding-top: 28px; }
+  .screen.home > * { grid-column: 1 / -1; }
+  .screen.home > .lead { grid-column: 1; margin: 0; position: sticky; top: 96px; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .screen.home > .stories { grid-column: 2; }
+  .screen.home > .band { display: none; }
+  .coverage { padding: 22px 24px; }
+  .coverage .count b { font-size: 56px; }
+  .coverage .count { font-size: 14px; min-width: 110px; }
+  .coverage .names i { font-size: 15px; padding: 6px 12px; }
+  .lead-copy { padding: 22px 24px 26px; gap: 12px; }
+  .lead h2 { font-size: 44px; line-height: 1.14; }
+  .lead .summary { font-size: 19px; line-height: 1.6; -webkit-line-clamp: 6; }
+  .lead:hover h2, .story:hover h3, .source-item:hover h3, .flash-list a:hover h3 { color: var(--brand); }
+  .stories > li:first-child .story { padding-top: 0; }
+  .story h3 { font-size: 21px; }
+  .read-more { font-size: 14px; }
+
+  /* every other screen: one comfortable reading column */
+  .screen:not(.home) { width: 100%; max-width: 860px; margin-inline: auto; }
+  .article h1 { font-size: 44px; }
+  .standfirst { font-size: 21px; }
+  .ai-summary .body { font-size: 21px; }
+  .ai-summary .ai-note, .forecast-note { font-size: 13px; }
+  .source-item h3 { font-size: 20px; }
+  .flash-list h3 { font-size: 20px; }
+  .flash-list time { width: 70px; font-size: 21px; }
+  .mosaic { grid-template-columns: repeat(4, 1fr); }
+  .topic-tile.wide { grid-column: span 2; }
+  .action-bar { bottom: 24px; width: 480px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; box-shadow: 0 10px 30px rgba(10, 20, 50, .18); }
+  .action-bar button:hover { background: var(--soft); }
+
+  /* elections */
+  .forecast { max-width: 860px; margin: 28px auto 0; padding: 34px 36px 30px; border-radius: 16px; }
+  .forecast-winner h2 { font-size: 64px; }
+  .forecast-seats { width: 132px; height: 132px; }
+  .forecast-seats b { font-size: 58px; }
+  .forecast-next b { font-size: 36px; }
+  .forecast-next .name { font-size: 17px; }
+  .forecast-text { font-size: 22px; }
+  .seats-bar { height: 44px; }
+  .seats-bar span { line-height: 44px; font-size: 15px; }
+  .legend { font-size: 15px; }
+  .party-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 44px; }
+  .channel-bar { font-size: 14px; }
+
+  /* popups: a centred window instead of a sheet from the bottom; the menu opens at the shell's edge */
+  .guide { bottom: auto; top: 50%; transform: translate(-50%, -50%); border-radius: 18px; padding: 24px; animation: none; max-height: 88vh; }
+  .sheet { right: max(0px, calc(50% - 590px)); width: 340px; }
+}
