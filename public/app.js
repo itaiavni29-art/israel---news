@@ -242,6 +242,17 @@ function homeView() {
   ];
 }
 
+// What to read next: the other events on the list right now, and the elections section.
+function moreEvents(currentId) {
+  const others = (data?.events ?? []).filter(e => e.id !== currentId).slice(0, 5);
+  if (!others.length) return null;
+  return el('section', { class: 'screen more-events', 'aria-label': 'עוד אירועים' },
+    el('h2', { class: 'sub-head' }, 'עוד אירועים עכשיו'),
+    el('ul', { class: 'stories' }, others.map(e => storyRow(e))),
+    el('a', { class: 'list-link', href: '#/elections' }, el('span', { class: 'label' }, icon('grid'), 'בחירות 2026: הסקרים והתחזית'), icon('more')),
+    el('a', { class: 'list-link', href: '#/' }, el('span', { class: 'label' }, icon('house'), 'לכל האירועים של עכשיו'), icon('more')));
+}
+
 function eventView(id, tab) {
   const ev = findEvent(id);
   if (!ev) return [header({ back: true }), el('main', { class: 'screen' }, empty('האירוע כבר לא ברשימה.', 'ייתכן שהוחלף באירוע חדש יותר.'))];
@@ -289,6 +300,7 @@ function eventView(id, tab) {
           el('h3', { lang: langOf(a.title) }, a.title),
           el('span', { class: 'meta' }, a.publishedAt ? `${hhmm(a.publishedAt)} · ${ago(a.publishedAt)} · ` : '', el('b', {}, 'לכתבה המלאה ↗'),
             el('span', { class: 'visually-hidden' }, ` (${a.sourceName}, נפתח בחלון חדש)`)))))))),
+    moreEvents(ev.id),
     // On this screen the bottom bar holds the story's actions instead of the app's navigation.
     el('div', { class: 'action-bar' },
       el('button', { type: 'button', onclick: share }, icon('share'), 'שיתוף'),
@@ -674,7 +686,18 @@ async function route({ refresh = true } = {}) {
 }
 
 let lastHash = location.hash;
+// Vercel Web Analytics counts real page loads only, and this app moves between screens by the #… address,
+// so each screen change is reported as a page view of its own. Without this, a visit that read five
+// events looks like a one-page visit — a "bounce".
+function trackScreen() {
+  if (typeof window.va !== 'function') return; // local runs and GitHub Pages: no analytics
+  const path = (location.hash || '#/').slice(1) || '/';
+  const route = path.replace(/^\/event\/[^/]+/, '/event/[id]').replace(/^\/topics\/\w+/, '/topics/[section]');
+  window.va('pageview', { route, path });
+}
+
 window.addEventListener('hashchange', async () => {
+  trackScreen();
   const prevTab = document.activeElement?.id;
   const sameScreen = lastHash.split('/').slice(0, 3).join('/') === location.hash.split('/').slice(0, 3).join('/');
   lastHash = location.hash;

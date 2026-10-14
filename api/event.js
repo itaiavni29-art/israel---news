@@ -4,10 +4,12 @@ import { archive, page, send, notFound, esc, safeUrl, time, SITE, BRAND, CATEGOR
 export default async function handler(req, res) {
   const url = new URL(req.url, SITE), day = url.searchParams.get('day') ?? '', id = url.searchParams.get('id') ?? '';
   if (!/^\d{4}-\d\d-\d\d$/.test(day) || !/^[0-9a-f]{6,12}$/.test(id)) return notFound(res, 'הדף לא נמצא');
-  const ev = (await archive(day))?.events?.[id];
+  const [dayFile, index] = await Promise.all([archive(day), archive('index')]);
+  const ev = dayFile?.events?.[id];
   if (!ev) return notFound(res, 'האירוע כבר לא בארכיון');
 
   const sources = [...new Set(ev.articles.map(a => a.sourceName))];
+  const more = (index?.events ?? []).filter(e => !(e.day === day && e.id === id)).slice(0, 6);
   const names = sources.length < 2 ? sources.join('') : `${sources.slice(0, -1).join(', ')} ו${sources.at(-1)}`;
   const path = `/e/${day}/${id}`, cat = ev.category?.name ?? CATEGORIES[ev.category?.id] ?? 'חדשות';
   const bySource = new Map();
@@ -26,6 +28,11 @@ export default async function handler(req, res) {
     <h2 class="sub-head">הכתבות המקוריות (${ev.articles.length})</h2>
     <ul class="source-list">${[...bySource].map(([name, list]) => `<li><span class="src-tag">${esc(name)}</span>${list.map(a =>
       `<a class="source-item" href="${esc(safeUrl(a.link))}" target="_blank" rel="noopener noreferrer"><h3>${esc(a.title)}</h3><span class="meta">${a.publishedAt ? time(a.publishedAt) + ' · ' : ''}<b>לכתבה המלאה ↗</b></span></a>`).join('')}</li>`).join('')}</ul>
+    ${more.length ? `<h2 class="sub-head">עוד אירועים</h2>
+    <ul class="stories">${more.map(e => `<li><a class="story" href="/e/${e.day}/${e.id}"><span class="copy"><span class="row"><span class="cat">${esc(CATEGORIES[e.category] ?? 'חדשות')}</span></span><h3>${esc(e.title)}</h3>
+      <span class="meta">${time(e.at)} · ${e.sources === 1 ? 'מקור אחד' : e.sources + ' מקורות'}</span></span><span class="read-more">קרא עוד</span></a></li>`).join('')}</ul>` : ''}
+    <a class="list-link" href="/#/elections" style="border-top:1px solid var(--line);font-weight:700">בחירות 2026: הסקרים והתחזית ←</a>
+    <a class="list-link" href="/" style="border-top:1px solid var(--line);font-weight:700">לכל החדשות של עכשיו ←</a>
   </main>`;
 
   send(res, 200, page({

@@ -449,3 +449,9 @@ a, button { -webkit-tap-highlight-color: transparent; }
   .guide { bottom: auto; top: 50%; transform: translate(-50%, -50%); border-radius: 18px; padding: 24px; animation: none; max-height: 88vh; }
   .sheet { right: max(0px, calc(50% - 590px)); width: 340px; }
 }
+
+/* "more events" under an event */
+.more-events { padding-top: 0; gap: 0; }
+.more-events .sub-head { margin-top: 0; margin-bottom: 4px; }
+.more-events .list-link { border-top: 1px solid var(--line); font-weight: 700; }
+@media (min-width: 1000px) { .screen.more-events { padding-top: 0; } }
