@@ -472,3 +472,82 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 /* the red breaking bar names the source of the flash */
 .live-strip .live-src { flex: none; padding: 2px 8px; border-radius: 3px; background: rgba(255, 255, 255, .2); font-size: 13px; font-weight: 700; }
+
+/* ==========================================================================
+   Phones follow their own system. Everything here is phone-only (under 1000px) and keyed on the
+   class app.js puts on <html>: .ios or .android. Same pages, same brand; the controls change.
+   ========================================================================== */
+@media (max-width: 999px) {
+  /* ---------- iPhone: iOS 26 "Liquid Glass" ---------- */
+  /* glass: see-through, blurred, with a light rim — bars float above the page instead of sitting on its edge */
+  html.ios .app-header { background: rgba(20, 71, 214, .82); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+  html.ios .app-header.live { background: rgba(217, 21, 31, .85); }
+  html.ios .bottom-nav, html.ios .action-bar {
+    left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(100% - 28px); max-width: 492px; height: 62px; padding: 5px;
+    border: 1px solid rgba(255, 255, 255, .75); border-radius: 999px;
+    background: rgba(250, 250, 252, .66); -webkit-backdrop-filter: blur(24px) saturate(190%); backdrop-filter: blur(24px) saturate(190%);
+    box-shadow: 0 10px 34px rgba(15, 31, 77, .2), inset 0 1px 0 rgba(255, 255, 255, .9);
+  }
+  html.ios .nav-item { height: 100%; justify-content: center; gap: 2px; border-radius: 999px; font-size: 11px; transition: background-color .2s, transform .15s; }
+  html.ios .nav-item[aria-current="page"] { background: rgba(20, 71, 214, .13); }
+  html.ios .nav-item[data-nav="live"][aria-current="page"] { background: rgba(217, 21, 31, .12); }
+  html.ios .action-bar { overflow: hidden; }
+  html.ios .action-bar button { border-radius: 999px; font-size: 14px; }
+  html.ios .action-bar button + button { border: 0; }
+  html.ios .shell { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  html.ios .toast { bottom: calc(86px + env(safe-area-inset-bottom)); background: rgba(28, 28, 30, .78); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  /* sheets: big rounded corners, a grabber, frosted */
+  html.ios .guide { border-radius: 30px 30px 0 0; background: rgba(255, 255, 255, .9); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); padding-top: 10px; }
+  html.ios .guide::before { content: ""; align-self: center; width: 38px; height: 5px; border-radius: 3px; background: rgba(60, 60, 67, .3); flex: none; }
+  html.ios .sheet { border-radius: 26px 0 0 26px; }
+  /* buttons: capsules; pressing one makes it shrink a little, as on the system */
+  html.ios .guide-btn { border-radius: 999px; min-height: 50px; }
+  html.ios .guide-btn:not(.primary) { background: rgba(118, 118, 128, .12); border-color: transparent; }
+  /* tabs: the segmented control */
+  html.ios .tabs { gap: 0; padding: 3px; border: 0; border-radius: 999px; background: rgba(118, 118, 128, .12); }
+  html.ios .tab { flex: 1; min-width: 0; padding: 8px 6px; border: 0; border-radius: 999px; font-size: 14px; transition: background-color .2s, color .2s; }
+  html.ios .tab[aria-selected="true"] { background: #fff; color: var(--ink); box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 1px 1px rgba(0, 0, 0, .04); }
+  /* the sections row: the selected section is a filled capsule, and the row snaps as it is swiped */
+  html.ios .sections { gap: 6px; padding: 8px var(--gutter); scroll-snap-type: x proximity; border-bottom: 0; }
+  html.ios .sections a { scroll-snap-align: start; padding: 7px 14px; border: 0; border-radius: 999px; font-size: 15px; background: rgba(118, 118, 128, .1); }
+  html.ios .sections a[aria-current="page"] { background: var(--brand); color: #fff; }
+  html.ios .search { border-radius: 12px; background: rgba(118, 118, 128, .12); }
+  html.ios .chip, html.ios .topic-tile, html.ios .empty, html.ios .profile-card { border-radius: 16px; }
+  html.ios .topic-tile { border-radius: 20px; }
+  html.ios .nav-item:active, html.ios .guide-btn:active, html.ios .action-bar button:active, html.ios .chip:active, html.ios .sections a:active { transform: scale(.94); }
+  html.ios .story:active, html.ios .lead:active, html.ios .flash-list a:active, html.ios .list-link:active { background: rgba(118, 118, 128, .1); }
+
+  /* ---------- Android: Material 3 ---------- */
+  /* navigation bar: a tonal surface; the selected screen gets an "active indicator" pill behind its icon */
+  html.android .bottom-nav { height: calc(80px + env(safe-area-inset-bottom)); padding-top: 12px; align-items: flex-start; border-top: 0; background: #eef1fa; }
+  html.android .nav-item { position: relative; isolation: isolate; gap: 6px; font-size: 12px; font-weight: 500; color: #44474f; }
+  html.android .nav-item::before { content: ""; position: absolute; z-index: -1; top: -4px; left: 50%; width: 64px; height: 32px; border-radius: 16px; background: #d9e2ff; transform: translateX(-50%) scaleX(0); transition: transform .2s cubic-bezier(.2, 0, 0, 1); }
+  html.android .nav-item[aria-current="page"] { color: #001849; font-weight: 700; }
+  html.android .nav-item[aria-current="page"]::before { transform: translateX(-50%) scaleX(1); }
+  html.android .nav-item[data-nav="live"][aria-current="page"] { color: #410002; }
+  html.android .nav-item[data-nav="live"][aria-current="page"]::before { background: #ffdad6; }
+  html.android .shell { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  html.android .action-bar { height: calc(80px + env(safe-area-inset-bottom)); border-top: 0; background: #eef1fa; }
+  html.android .action-bar button + button { border: 0; }
+  html.android .toast { bottom: calc(92px + env(safe-area-inset-bottom)); border-radius: 4px; background: #2f3036; padding: 14px 16px; }
+  /* bottom sheet: 28px corners and a drag handle */
+  html.android .guide { border-radius: 28px 28px 0 0; background: #f7f8ff; padding-top: 12px; }
+  html.android .guide::before { content: ""; align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #74777f; opacity: .5; flex: none; }
+  html.android .sheet { border-radius: 16px 0 0 16px; background: #f7f8ff; }
+  /* buttons: filled and outlined pills, 40px+ tall */
+  html.android .guide-btn { border-radius: 999px; min-height: 48px; font-weight: 500; letter-spacing: .01em; }
+  html.android .guide-btn:not(.primary) { border-color: #74777f; color: var(--brand); }
+  /* tabs: Material's primary tabs, the indicator with rounded top corners */
+  html.android .tab { border-bottom: 0; position: relative; }
+  html.android .tab[aria-selected="true"]::after { content: ""; position: absolute; bottom: 0; left: 50%; width: 40px; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand); transform: translateX(-50%); }
+  /* the sections row: filter chips */
+  html.android .sections { gap: 8px; padding: 10px var(--gutter); border-bottom: 0; }
+  html.android .sections a { padding: 6px 16px; border: 1px solid #c4c6d0; border-radius: 8px; font-size: 14px; font-weight: 500; }
+  html.android .sections a[aria-current="page"] { border-color: transparent; background: #d9e2ff; color: #001849; }
+  html.android .search { border-radius: 28px; background: #e9ecf6; }
+  html.android .chip { border-radius: 8px; }
+  html.android .topic-tile, html.android .empty, html.android .profile-card { border-radius: 16px; }
+  /* the ripple (spawned by app.js) */
+  html.android .ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .14; pointer-events: none; transform: scale(0); animation: ripple .5s cubic-bezier(.2, 0, 0, 1) forwards; }
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }

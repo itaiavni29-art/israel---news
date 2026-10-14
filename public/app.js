@@ -463,6 +463,21 @@ const a2hs = {
 };
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/.test(navigator.userAgent);
+// The phone's own look: html.ios → iOS "Liquid Glass" controls, html.android → Material 3 (see the end of style.css).
+document.documentElement.classList.add(isIOS ? 'ios' : isAndroid ? 'android' : 'web');
+// Material's ripple: a circle of ink spreads from the finger on everything that can be tapped (Android only).
+if (isAndroid) document.addEventListener('pointerdown', e => {
+  const target = e.target.closest?.('.nav-item, .guide-btn, .action-bar button, .story, .lead, .list-link, .chip, .tab, .icon-btn, .sections a, .flash-list a');
+  if (!target || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = target.getBoundingClientRect(), size = Math.max(r.width, r.height) * 2.2;
+  const ink = document.createElement('span');
+  ink.className = 'ripple';
+  ink.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+  if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
+  target.style.overflow = 'hidden';
+  target.append(ink);
+  ink.addEventListener('animationend', () => ink.remove());
+}, { passive: true });
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let installPrompt = null; // Android Chrome hands us its own install dialog when the site qualifies
 window.addEventListener('beforeinstallprompt', e => {
