@@ -1,4 +1,4 @@
-// "/" — the app's page (public/index.html) with the latest events already in it, as real links to their own
+// "/" — the app's page (public/app.html; on GitHub Pages the workflow copies it to index.html) with the latest events already in it, as real links to their own
 // pages. Search engines get a full home page without running the app; people see the same list until the
 // app starts and takes over (it replaces the contents of #app).
 import fs from 'node:fs';
@@ -6,7 +6,7 @@ import path from 'node:path';
 import { archive, send, esc, time, CATEGORIES } from './_lib.js';
 
 let shell = null;
-const readShell = () => (shell ??= fs.readFileSync(path.join(process.cwd(), 'public', 'index.html'), 'utf8'));
+const readShell = () => (shell ??= fs.readFileSync(path.join(process.cwd(), 'public', 'app.html'), 'utf8'));
 
 export default async function handler(req, res) {
   const index = await archive('index').catch(() => null);

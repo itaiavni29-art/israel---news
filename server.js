@@ -19,7 +19,7 @@ const server = http.createServer((req, res) => {
     if (!file.startsWith(PUBLIC)) { res.writeHead(403).end(); return; }
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       if (path.extname(file) === '.json') { res.writeHead(404).end(); return; } // no scan finished yet
-      file = path.join(PUBLIC, 'index.html');
+      file = path.join(PUBLIC, 'app.html');
     }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' });
     fs.createReadStream(file).pipe(res);

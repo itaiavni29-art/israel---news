@@ -62,11 +62,16 @@
       "source": "/index.html",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/app.html",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "functions": {
     "api/home.js": {
-      "includeFiles": "public/index.html"
+      "includeFiles": "public/app.html"
     }
   }
 }
