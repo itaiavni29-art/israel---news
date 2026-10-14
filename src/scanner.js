@@ -12,7 +12,7 @@ import { ROOT } from './config.js';
 import { FeedFetcher } from './feeds.js';
 import { Embedder } from './embedder.js';
 import { EventStore, presentEvent } from './events.js';
-import { isHebrew } from './text.js';
+import { isHebrew, withoutMediaCues } from './text.js';
 import { Categorizer, CATEGORIES, categoryInfo, eventCategory } from './categories.js';
 import { Summarizer } from './summarizer.js';
 import { log } from './log.js';
@@ -175,7 +175,9 @@ export class Scanner {
         e.summary = ev.summary ? { text: ev.summary.text, model: ev.summary.model, at: ev.summary.at, single: !!ev.summary.single } : null;
         return e;
       }),
-      breaking: [...pool.filter(a => a.breaking).slice(0, 40).map(item), ...bare].sort((a, b) => b.publishedAt - a.publishedAt),
+      // the breaking list is text only: "צפו" / "תיעוד" / "וידאו" are taken out of its headlines
+      breaking: [...pool.filter(a => a.breaking).slice(0, 40).map(item), ...bare].sort((a, b) => b.publishedAt - a.publishedAt)
+        .map(b => ({ ...b, title: withoutMediaCues(b.title) })),
       // sport has its own quota, so a busy match night does not push the news out of the list (or the other way round)
       headlines: [...pool.filter(a => !a.sport).slice(0, 400), ...pool.filter(a => a.sport).slice(0, 150)].map(item),
     };

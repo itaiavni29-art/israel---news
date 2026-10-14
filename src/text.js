@@ -35,3 +35,22 @@ export function cleanTitle(raw) {
 }
 
 export const isHebrew = s => /[א-ת]/.test(s);
+
+// Words that send the reader to a picture or a video ("צפו", "תיעוד", "וידאו"…). A breaking-news line is text
+// only, so they mean nothing there. Hebrew has no \b: a word ends where no Hebrew letter follows ("צפויים" stays).
+const MEDIA = String.raw`(?:צפו|תיעוד|תיעודים|תעדו|וידאו|ווידאו|וידיאו|סרטון|סרטונים|תמונות|תמונה|גלריה|צילום|צילומים|האזינו|הקשיבו|הצצה|הקליפ|watch|video|photos?)(?![א-תa-z])`;
+// "תיעוד:", "צפו בתיעוד:", "תמונות מהזירה:" at the start
+const MEDIA_LEAD = new RegExp(String.raw`^\s*(?:(?:צפו|האזינו)\s+(?:ב|ל)?)?${MEDIA}(?:\s+[א-ת"׳']+){0,2}?\s*[:\-–|]\s*`, 'i');
+// "| צפו", "| צפו ברגע החיסול", "- תיעוד" at the end
+const MEDIA_TAIL = new RegExp(String.raw`\s*[|•–-]\s*(?:(?:צפו|האזינו)\s+(?:ב|ל)?)?${MEDIA}[^|•–]{0,30}$`, 'i');
+// "(וידאו)", "[צפו]" anywhere
+const MEDIA_PAREN = new RegExp(String.raw`\s*[(\[][^()\[\]]{0,15}${MEDIA}[^()\[\]]{0,15}[)\]]`, 'gi');
+
+/** A headline for the breaking list without "watch the video" cues: "גשם באילת | תיעוד" → "גשם באילת". */
+export function withoutMediaCues(title) {
+  const original = String(title ?? '').trim();
+  let t = original.replace(MEDIA_PAREN, '');
+  for (let i = 0; i < 2; i++) t = t.replace(MEDIA_LEAD, '').replace(MEDIA_TAIL, '');
+  t = t.replace(/\s+/g, ' ').trim();
+  return t.length >= 8 ? t : original; // never leave a line that says nothing
+}

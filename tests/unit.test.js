@@ -121,3 +121,14 @@ test('archive: events with a summary get a page entry; old days are dropped', as
   assert.equal(fs.existsSync(path.join(dir, 'archive', dayOf(now) + '.json')), false);
   fs.rmSync(dir, { recursive: true });
 });
+
+test('breaking headlines lose "watch the video" cues, and only those', async () => {
+  const { withoutMediaCues: w } = await import('../src/text.js');
+  assert.equal(w('גשם ראשון באילת, רעמים - וחשש משיטפונות בדרום | תיעוד'), 'גשם ראשון באילת, רעמים - וחשש משיטפונות בדרום');
+  assert.equal(w('צה"ל חיסל מפקד פלוגה | צפו ברגע החיסול'), 'צה"ל חיסל מפקד פלוגה');
+  assert.equal(w('צפו בתיעוד: השריפה הגדולה בחיפה'), 'השריפה הגדולה בחיפה');
+  assert.equal(w('השריפה בכרמל (וידאו)'), 'השריפה בכרמל');
+  assert.equal(w('דיווח: וויטקוף וקושנר צפויים להגיע לרוסיה'), 'דיווח: וויטקוף וקושנר צפויים להגיע לרוסיה');
+  assert.equal(w('נתניהו - צפוי לנאום הערב'), 'נתניהו - צפוי לנאום הערב');
+  assert.equal(w('תיעוד'), 'תיעוד', 'nothing would be left: keep the original');
+});
