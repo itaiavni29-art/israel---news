@@ -561,10 +561,12 @@ function maybeInstallGuide() {
 // A one-time announcement of the new elections section: what it is and where to find it.
 // Shown once per device (remembered in localStorage), and not at all once the legal poll-silence period begins.
 const NEWS_ELECTIONS = 'in:news-elections', NEWS_UNTIL = Date.parse('2026-10-23T00:00:00+03:00');
-function maybeElectionsNews() {
+// `then` runs once the announcement is closed (the install guide comes next, so the two never overlap).
+function maybeElectionsNews(then) {
   if (now() >= NEWS_UNTIL || location.hash === '#/elections' || document.querySelector('.guide')) return false;
   try { if (localStorage.getItem(NEWS_ELECTIONS)) return false; localStorage.setItem(NEWS_ELECTIONS, '1'); } catch { return false; } // cannot remember → never nag
-  const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); };
+  let done = false;
+  const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); if (!done) { done = true; then?.(); } };
   const onKey = e => { if (e.key === 'Escape') close(); };
   const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
   const box = el('section', { class: 'guide news', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'news-title' },
@@ -719,7 +721,8 @@ async function checkAppVersion() {
 // Pull new events automatically: every 30 s, and right away when the page comes back into view
 // (switching tabs, unlocking the phone, reopening the home-screen app, reconnecting).
 await route();
-if (!maybeElectionsNews()) maybeInstallGuide();
+// first the news about the elections section (once), then the home-screen guide (as before: every third visit)
+if (!maybeElectionsNews(() => setTimeout(maybeInstallGuide, 400))) maybeInstallGuide();
 checkAppVersion();
 setInterval(tick, REFRESH_MS);
 setInterval(checkAppVersion, 10 * 60_000);
