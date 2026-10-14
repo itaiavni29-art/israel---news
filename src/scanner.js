@@ -17,6 +17,23 @@ import { Categorizer, CATEGORIES, categoryInfo, eventCategory } from './categori
 import { Summarizer } from './summarizer.js';
 import { log } from './log.js';
 
+// The breaking list draws on every source, not only the two that publish a breaking-news feed (ynet, Maariv):
+// each site's newest headlines of the last few hours, newest first, with a cap per site so that no single
+// busy site fills the list.
+const BREAKING_WINDOW_MS = 3 * 3600_000, BREAKING_PER_SOURCE = 8, BREAKING_TOTAL = 80;
+export function breakingList(items) {
+  const seen = new Set(), perSource = new Map(), out = [];
+  for (const it of [...items].sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0))) {
+    const key = it.link ?? it.title;
+    if (seen.has(key)) continue;
+    const n = perSource.get(it.sourceId) ?? 0;
+    if (n >= BREAKING_PER_SOURCE) continue;
+    seen.add(key); perSource.set(it.sourceId, n + 1); out.push(it);
+    if (out.length >= BREAKING_TOTAL) break;
+  }
+  return out;
+}
+
 export class Scanner {
   /**
    * @param {object} config
@@ -176,7 +193,7 @@ export class Scanner {
         return e;
       }),
       // the breaking list is text only: "צפו" / "תיעוד" / "וידאו" are taken out of its headlines
-      breaking: [...pool.filter(a => a.breaking).slice(0, 40).map(item), ...bare].sort((a, b) => b.publishedAt - a.publishedAt)
+      breaking: breakingList([...pool.filter(a => !a.sport && (a.breaking || Date.now() - (a.publishedAt ?? 0) < BREAKING_WINDOW_MS)).map(item), ...bare])
         .map(b => ({ ...b, title: withoutMediaCues(b.title) })),
       // sport has its own quota, so a busy match night does not push the news out of the list (or the other way round)
       headlines: [...pool.filter(a => !a.sport).slice(0, 400), ...pool.filter(a => a.sport).slice(0, 150)].map(item),

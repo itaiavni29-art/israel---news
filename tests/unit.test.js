@@ -134,3 +134,14 @@ test('breaking headlines lose "watch the video" cues, and only those', async () 
   assert.equal(w('נתניהו - צפוי לנאום הערב'), 'נתניהו - צפוי לנאום הערב');
   assert.equal(w('תיעוד'), 'תיעוד', 'nothing would be left: keep the original');
 });
+
+test('the breaking list mixes all the sites, a few headlines each, newest first', async () => {
+  const { breakingList } = await import('../src/scanner.js');
+  const now = Date.now(), it = (sourceId, i) => ({ sourceId, title: sourceId + i, link: `https://x/${sourceId}/${i}`, publishedAt: now - i * 60_000 });
+  const items = [...Array.from({ length: 30 }, (_, i) => it('ynet', i)), it('haaretz', 5), it('srugim', 40), it('ynet', 0)];
+  const list = breakingList(items);
+  assert.equal(list.filter(x => x.sourceId === 'ynet').length, 8, 'a busy site is capped');
+  assert.ok(list.some(x => x.sourceId === 'haaretz') && list.some(x => x.sourceId === 'srugim'), 'the other sites are in');
+  assert.equal(new Set(list.map(x => x.link)).size, list.length, 'no duplicates');
+  assert.ok(list.every((x, i) => i === 0 || list[i - 1].publishedAt >= x.publishedAt), 'newest first');
+});
