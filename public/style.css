@@ -469,3 +469,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .polls-table td.proj { font-weight: 900; color: var(--brand); }
 .faq h3 { font-size: 17px; font-weight: 900; margin: 14px 0 4px; }
 .faq p { color: var(--muted); line-height: 1.6; }
+
+/* the red breaking bar names the source of the flash */
+.live-strip .live-src { flex: none; padding: 2px 8px; border-radius: 3px; background: rgba(255, 255, 255, .2); font-size: 13px; font-weight: 700; }

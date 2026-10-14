@@ -215,9 +215,11 @@ function homeView() {
   const [lead, ...rest] = events;
   return [
     header(), sectionTabs(),
-    latestBreaking && el('a', { class: 'live-strip', href: '#/live', 'aria-label': `מבזק אחרון: ${latestBreaking.title}` },
+    latestBreaking && el('a', { class: 'live-strip', href: safeUrl(latestBreaking.link), target: '_blank', rel: 'noopener noreferrer',
+        'aria-label': `מבזק אחרון מ${latestBreaking.sourceName}: ${latestBreaking.title} (נפתח באתר המקורי)` },
       el('span', { class: 'live-label' }, 'מבזק'),
       el('time', { datetime: new Date(latestBreaking.publishedAt).toISOString() }, hhmm(latestBreaking.publishedAt)),
+      el('span', { class: 'live-src' }, latestBreaking.sourceName),
       el('span', { class: 'update', lang: langOf(latestBreaking.title) }, latestBreaking.title)),
     isStale() && el('p', { class: 'scan-status stale' }, updatedText()),
     el('main', { class: 'screen home', id: 'main' },
@@ -328,9 +330,11 @@ function liveView() {
             el('a', { href: safeUrl(b.link), target: '_blank', rel: 'noopener noreferrer' },
               el('time', { datetime: new Date(b.publishedAt).toISOString() }, hhmm(b.publishedAt)),
               el('span', { class: 'copy' },
+                el('span', { class: 'row' }, srcLabel(b.sourceName, b.color)),
                 el('h3', { lang: langOf(b.title) }, b.title),
-                el('span', { class: 'meta' }, `${b.sourceName}${b.category ? ' | ' + b.category.name : ''} | `, el('b', {}, 'לכתבה המלאה ↗'))))))),
-      el('p', { class: 'footnote' }, 'מבזקים כפי שפורסמו בפידים הרשמיים של האתרים. כל כותרת מובילה לאתר המקורי.')),
+                el('span', { class: 'meta' }, b.category ? b.category.name + ' | ' : '', el('b', {}, `לכתבה המלאה ב${b.sourceName} ↗`),
+                  el('span', { class: 'visually-hidden' }, ' (נפתח בחלון חדש)'))))))),
+      el('p', { class: 'footnote' }, 'המבזקים הם הכותרות כפי שפרסמו האתרים עצמם בפידים הרשמיים שלהם. ליד כל מבזק מופיע שם האתר שפרסם אותו, וכל מבזק מוביל לכתבה באתר המקורי. כל הזכויות שמורות לאתרים המקוריים.')),
   ];
 }
 
