@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://zmanemetnews.co.il/sitemap.xml
+Sitemap: https://zmanemetnews.co.il/news-sitemap.xml

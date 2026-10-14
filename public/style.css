@@ -455,3 +455,17 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .more-events .sub-head { margin-top: 0; margin-bottom: 4px; }
 .more-events .list-link { border-top: 1px solid var(--line); font-weight: 700; }
 @media (min-width: 1000px) { .screen.more-events { padding-top: 0; } }
+
+/* the elections page for search engines: the poll table and the questions */
+.table-wrap { overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+.polls-table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+.polls-table th, .polls-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: center; }
+.polls-table thead th { background: var(--soft); font-weight: 700; }
+.polls-table thead small { display: block; font-weight: 500; color: var(--faint); font-size: 11px; }
+.polls-table tbody th { text-align: start; font-weight: 700; }
+.polls-table tbody th i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-inline-end: 6px; }
+.polls-table td.under { color: var(--faint); font-size: 12px; }
+.polls-table td.avg { font-weight: 700; background: var(--brand-soft); }
+.polls-table td.proj { font-weight: 900; color: var(--brand); }
+.faq h3 { font-size: 17px; font-weight: 900; margin: 14px 0 4px; }
+.faq p { color: var(--muted); line-height: 1.6; }

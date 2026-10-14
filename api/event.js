@@ -37,9 +37,13 @@ export default async function handler(req, res) {
 
   send(res, 200, page({
     title: `${ev.title} · ${BRAND}`, description: ev.summary, path, body,
-    jsonLd: { '@context': 'https://schema.org', '@type': 'Article', headline: ev.title.slice(0, 110), description: ev.summary, inLanguage: 'he',
+    jsonLd: [{ '@context': 'https://schema.org', '@type': 'NewsArticle', headline: ev.title.slice(0, 110), image: [SITE + '/icons/icon-512.png'], description: ev.summary, inLanguage: 'he',
       datePublished: new Date(ev.detectedAt).toISOString(), dateModified: new Date(ev.updatedAt).toISOString(), mainEntityOfPage: SITE + path,
       author: { '@type': 'Organization', name: BRAND, url: SITE }, publisher: { '@type': 'Organization', name: BRAND, logo: { '@type': 'ImageObject', url: SITE + '/icons/icon-512.png' } },
       citation: ev.articles.map(a => a.link) },
+      { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: BRAND, item: SITE + '/' },
+        ...(ev.category?.id ? [{ '@type': 'ListItem', position: 2, name: cat, item: SITE + '/s/' + ev.category.id }] : []),
+        { '@type': 'ListItem', position: ev.category?.id ? 3 : 2, name: ev.title.slice(0, 110), item: SITE + path }] }],
   }));
 }

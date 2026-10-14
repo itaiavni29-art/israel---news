@@ -5,6 +5,12 @@ export const BRAND = 'זמן אמת';
 const DATA = 'https://raw.githubusercontent.com/itaiavni29-art/israel---news/data/archive/';
 export const CATEGORIES = { politics: 'פוליטיקה', security: 'ביטחון', economy: 'כלכלה', sport: 'ספורט', world: 'עולם', law: 'משפט ופלילים', society: 'חברה ובריאות', tech: 'טכנולוגיה' };
 
+/** Another file the scanner publishes next to the archive (elections.json …). */
+export async function dataFile(name) {
+  const r = await fetch(DATA.replace(/archive\/$/, '') + name + '.json', { headers: { 'User-Agent': 'zmanemetnews.co.il' } });
+  return r.ok ? r.json() : null;
+}
+
 export async function archive(name) {
   const r = await fetch(DATA + name + '.json', { headers: { 'User-Agent': 'zmanemetnews.co.il' } });
   if (!r.ok) return null;
@@ -43,7 +49,7 @@ ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(
 <body data-screen="page">
 <div class="shell" style="padding-bottom:32px">
   <header class="app-header" style="grid-template-columns:1fr"><a class="brand" href="/"><img class="brand-mark" src="/logo-mark-white.svg" alt="" width="26" height="26"><span class="brand-name">${BRAND}</span></a></header>
-  <nav class="sections" aria-label="מדורים"><a href="/">ראשי</a>${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}"${path === '/s/' + id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
+  <nav class="sections" aria-label="מדורים"><a href="/">ראשי</a><a href="/elections-2026"${path === '/elections-2026' ? ' aria-current="page"' : ''}>בחירות 2026</a>${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}"${path === '/s/' + id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
   ${body}
   <p class="footnote" style="padding:18px"><a href="/">לעמוד הראשי של ${BRAND}: החדשות שמסוקרות עכשיו בכמה אתרים</a><br>האתר לא מעתיק כתבות: רק כותרות, קישורים לאתרים המקוריים וסיכום אוטומטי.</p>
 </div>
