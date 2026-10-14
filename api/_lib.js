@@ -51,7 +51,7 @@ ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(
   <header class="app-header" style="grid-template-columns:1fr"><a class="brand" href="/"><img class="brand-mark" src="/logo-mark-white.svg" alt="" width="26" height="26"><span class="brand-name">${BRAND}</span></a></header>
   <nav class="sections" aria-label="מדורים"><a href="/">ראשי</a><a href="/elections-2026"${path === '/elections-2026' ? ' aria-current="page"' : ''}>בחירות 2026</a>${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}"${path === '/s/' + id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
   ${body}
-  <p class="footnote" style="padding:18px"><a href="/">לעמוד הראשי של ${BRAND}: החדשות שמסוקרות עכשיו בכמה אתרים</a><br>האתר לא מעתיק כתבות: רק כותרות, קישורים לאתרים המקוריים וסיכום אוטומטי.</p>
+  <p class="footnote" style="padding:18px"><a href="/about">אודות ${BRAND}</a> · <a href="/">לעמוד הראשי של ${BRAND}: החדשות שמסוקרות עכשיו בכמה אתרים</a><br>האתר לא מעתיק כתבות: רק כותרות, קישורים לאתרים המקוריים וסיכום אוטומטי.</p>
 </div>
 </body>
 </html>`;

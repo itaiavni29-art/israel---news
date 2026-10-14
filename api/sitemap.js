@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   const index = await archive('index');
   const url = (loc, lastmod, freq) => `<url><loc>${SITE}${loc}</loc>${lastmod ? `<lastmod>${new Date(lastmod).toISOString()}</lastmod>` : ''}${freq ? `<changefreq>${freq}</changefreq>` : ''}</url>`;
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
-    url('/', null, 'always'), url('/elections-2026', null, 'hourly'), url('/latest', index?.generatedAt, 'hourly'),
+    url('/', null, 'always'), url('/elections-2026', null, 'hourly'), url('/about', null, 'monthly'), url('/latest', index?.generatedAt, 'hourly'),
     ...Object.keys(CATEGORIES).map(c => url('/s/' + c, null, 'hourly')),
     ...(index?.events ?? []).map(e => url(`/e/${e.day}/${e.id}`, e.updatedAt ?? e.at)),
   ].join('\n')}\n</urlset>\n`;

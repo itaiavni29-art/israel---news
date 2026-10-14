@@ -116,7 +116,9 @@ test('archive: events with a summary get a page entry; old days are dropped', as
   assert.equal(index.events[0].id, shortId('aaaaaaaa-1111-2222-3333-444444444444'));
   const day = JSON.parse(fs.readFileSync(path.join(dir, 'archive', dayOf(now) + '.json'), 'utf8'));
   assert.equal(day.events[index.events[0].id].summary, 'סיכום');
-  updateArchive(dir, [], now + 40 * 86400_000);               // forty days later the day file and its entry are gone
+  updateArchive(dir, [], now + 40 * 86400_000);               // a month later the page is still there (pages stay up for a year)
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'archive/index.json'), 'utf8')).events.length, 1);
+  updateArchive(dir, [], now + 400 * 86400_000);              // after more than a year the day file and its entry are gone
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'archive/index.json'), 'utf8')).events.length, 0);
   assert.equal(fs.existsSync(path.join(dir, 'archive', dayOf(now) + '.json')), false);
   fs.rmSync(dir, { recursive: true });

@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const KEEP_DAYS = 30, INDEX_SIZE = 600;
+const KEEP_DAYS = 365, INDEX_SIZE = 5000;
 export const dayOf = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(ms);
 export const shortId = id => String(id).replace(/-/g, '').slice(0, 10);
 

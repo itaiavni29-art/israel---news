@@ -12,6 +12,12 @@ export default async function handler(req, res) {
   const more = (index?.events ?? []).filter(e => !(e.day === day && e.id === id)).slice(0, 6);
   const names = sources.length < 2 ? sources.join('') : `${sources.slice(0, -1).join(', ')} ו${sources.at(-1)}`;
   const path = `/e/${day}/${id}`, cat = ev.category?.name ?? CATEGORIES[ev.category?.id] ?? 'חדשות';
+  // who reported first, and when each site joined: something only we can tell
+  const firsts = [...new Map([...ev.articles].filter(a => a.publishedAt).sort((a, b) => a.publishedAt - b.publishedAt).map(a => [a.sourceName, a])).values()];
+  const hm = ms => new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit' }).format(ms);
+  const timeline = firsts.length > 1 ? `<h2 class="sub-head">איך התפתח הסיקור</h2>
+    <p>הראשון לדווח היה ${esc(firsts[0].sourceName)}, ב-${hm(firsts[0].publishedAt)}. ${firsts.slice(1).map(a => `${esc(a.sourceName)} הצטרף ב-${hm(a.publishedAt)}`).join(', ')}.
+    בסך הכול ${sources.length} אתרים פרסמו ${ev.articles.length === 1 ? 'כתבה אחת' : ev.articles.length + ' כתבות'} על האירוע.</p>` : '';
   const bySource = new Map();
   for (const a of ev.articles) bySource.set(a.sourceName, [...(bySource.get(a.sourceName) ?? []), a]);
 
@@ -25,9 +31,10 @@ export default async function handler(req, res) {
       <p class="body">${esc(ev.summary)}</p>
       <p class="ai-note">נכתב אוטומטית על ידי בינה מלאכותית מתוך הכותרות והתקצירים שפרסמו המקורות. ייתכנו אי־דיוקים — לפרטים המלאים פתחו את הכתבות המקוריות.</p>
     </section>
+    ${timeline}
     <h2 class="sub-head">הכתבות המקוריות (${ev.articles.length})</h2>
     <ul class="source-list">${[...bySource].map(([name, list]) => `<li><span class="src-tag">${esc(name)}</span>${list.map(a =>
-      `<a class="source-item" href="${esc(safeUrl(a.link))}" target="_blank" rel="noopener noreferrer"><h3>${esc(a.title)}</h3><span class="meta">${a.publishedAt ? time(a.publishedAt) + ' · ' : ''}<b>לכתבה המלאה ↗</b></span></a>`).join('')}</li>`).join('')}</ul>
+      `<a class="source-item" href="${esc(safeUrl(a.link))}" target="_blank" rel="noopener noreferrer"><span class="headline">${esc(a.title)}</span><span class="meta">${a.publishedAt ? time(a.publishedAt) + ' · ' : ''}<b>לכתבה המלאה ↗</b></span></a>`).join('')}</li>`).join('')}</ul>
     ${more.length ? `<h2 class="sub-head">עוד אירועים</h2>
     <ul class="stories">${more.map(e => `<li><a class="story" href="/e/${e.day}/${e.id}"><span class="copy"><span class="row"><span class="cat">${esc(CATEGORIES[e.category] ?? 'חדשות')}</span></span><h3>${esc(e.title)}</h3>
       <span class="meta">${time(e.at)} · ${e.sources === 1 ? 'מקור אחד' : e.sources + ' מקורות'}</span></span><span class="read-more">קרא עוד</span></a></li>`).join('')}</ul>` : ''}

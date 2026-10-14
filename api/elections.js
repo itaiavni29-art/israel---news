@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   const parties = e.parties.filter(p => p.average > 0 || p.projected > 0).sort((a, b) => b.projected - a.projected || b.average - a.average);
   const [first, second] = parties;
   const channels = e.polls.map(p => p.name).join(', ').replace(/, ([^,]*)$/, ' ו$1');
-  const updated = time(e.updatedAt);
+  const updated = time(e.checkedAt ?? e.updatedAt);
   const description = `ממוצע סקרי המנדטים של ${channels} לקראת הבחירות לכנסת ב-27 באוקטובר 2026: ${first.name} ${first.projected}, ${second.name} ${second.projected}. טבלה לפי ערוץ ותחזית אוטומטית.`;
   const cell = (poll, p) => { const n = poll.seats[p.key] ?? 0; return n ? `<td>${n}</td>` : `<td class="under">${esc(poll.below?.[p.key] ?? '–')}</td>`; };
 

@@ -10,6 +10,10 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/api/home"
+    },
+    {
       "source": "/e/:day/:id",
       "destination": "/api/event?day=:day&id=:id"
     },
@@ -32,6 +36,37 @@
     {
       "source": "/news-sitemap.xml",
       "destination": "/api/news-sitemap"
+    },
+    {
+      "source": "/about",
+      "destination": "/api/about"
     }
-  ]
+  ],
+  "redirects": [
+    {
+      "source": "/elections",
+      "destination": "/elections-2026",
+      "permanent": true
+    },
+    {
+      "source": "/elections-2026/",
+      "destination": "/elections-2026",
+      "permanent": true
+    },
+    {
+      "source": "/bchirot",
+      "destination": "/elections-2026",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
+  "functions": {
+    "api/home.js": {
+      "includeFiles": "public/index.html"
+    }
+  }
 }

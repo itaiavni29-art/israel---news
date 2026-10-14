@@ -71,6 +71,28 @@ function remember(ev) {
   store.set(HISTORY, list.slice(0, 30));
 }
 // An event may have left the list (only 10 are kept); saved/viewed copies still open.
+// Real addresses (the ones the server renders and search engines index) where the site is served with its
+// server pages; on GitHub Pages the app keeps to #/… addresses.
+const PATHS = LOCAL || /(^|\.)zmanemetnews\.co\.il$|\.vercel\.app$/.test(location.hostname);
+const shortId = id => String(id).replace(/-/g, '').slice(0, 10);
+const dayOf = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(ms);
+/** An event's address: its own page (/e/<day>/<id>) when it has one — every event with a summary does. */
+const eventHref = ev => (PATHS && ev.summary?.text ? `/e/${dayOf(ev.detectedAt)}/${shortId(ev.id)}` : `#/event/${ev.id}`);
+const sectionHref = id => (PATHS ? `/s/${id}` : `#/topics/${id}`);
+const ELECTIONS_HREF = PATHS ? '/elections-2026' : '#/elections';
+const HOME_HREF = PATHS ? '/' : '#/';
+const allKnownEvents = () => [...(data?.events ?? []), ...store.get(SAVED).map(s => s.event), ...store.get(HISTORY).map(h => h.event)];
+/** The screen to show, as a #/… key, whether the address is a real path or a #/… one. */
+function currentKey() {
+  if (location.hash.startsWith('#/')) return location.hash;
+  const p = location.pathname.replace(/\/+$/, '') || '/';
+  let m;
+  if ((m = p.match(/^\/e\/(\d{4}-\d\d-\d\d)\/([0-9a-f]{6,12})$/))) { const ev = allKnownEvents().find(e => shortId(e.id) === m[2]); return ev ? `#/event/${ev.id}` : '#/'; }
+  if ((m = p.match(/^\/s\/(\w+)$/))) return `#/topics/${m[1]}`;
+  if (p === '/elections-2026') return '#/elections';
+  return '#/';
+}
+
 const findEvent = id => data?.events.find(e => e.id === id)
   ?? store.get(SAVED).find(s => s.event.id === id)?.event
   ?? store.get(HISTORY).find(h => h.event.id === id)?.event;
@@ -134,7 +156,7 @@ function header({ title = null, back = false, textSize = false } = {}) {
       back
         ? el('a', { class: 'icon-btn', href: '#/', 'aria-label': 'חזרה', onclick: e => { if (history.length > 1) { e.preventDefault(); history.back(); } } }, icon('back'))
         : el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'תפריט', onclick: openMenu }, icon('menu')),
-      el('a', { class: 'brand', href: '#/', 'aria-label': `${BRAND} — לעמוד הראשי` }, brandMark(), el('span', { class: 'brand-name' }, BRAND)),
+      el('a', { class: 'brand', href: HOME_HREF, 'aria-label': `${BRAND} — לעמוד הראשי` }, brandMark(), el('span', { class: 'brand-name' }, BRAND)),
       textSize
         ? el('button', { class: 'icon-btn text-size', type: 'button', 'aria-label': 'הגדלת הטקסט', 'aria-pressed': String(bigText()), onclick: toggleBigText }, 'א+')
         : el('a', { class: 'icon-btn', href: '#/topics', 'aria-label': 'חיפוש' }, icon('search'))),
@@ -157,7 +179,7 @@ document.documentElement.classList.toggle('big-text', bigText());
 function sectionTabs(active = null) {
   const link = (href, label, on) => el('a', { href, 'aria-current': on ? 'page' : null }, label);
   return el('nav', { class: 'sections', 'aria-label': 'מדורים' },
-    link('#/', 'ראשי', active == null), link('#/elections', 'בחירות 2026', active === 'elections'), (data?.categories ?? []).map(c => link(`#/topics/${c.id}`, c.name, active === c.id)));
+    link(HOME_HREF, 'ראשי', active == null), link(ELECTIONS_HREF, 'בחירות 2026', active === 'elections'), (data?.categories ?? []).map(c => link(sectionHref(c.id), c.name, active === c.id)));
 }
 
 function updatedText() {
@@ -176,7 +198,7 @@ function coverageText(ev) {
 }
 
 function storyRow(ev, { saved = null } = {}) {
-  const href = `#/event/${ev.id}`;
+  const href = eventHref(ev);
   const fresh = now() - ev.detectedAt < NEW_MS;
   const meta = saved
     ? `${saved.removable ? "נשמר" : "נצפה"} ${ago(saved.savedAt)} · ${sourcesText(ev.sourceCount)}`
@@ -227,7 +249,7 @@ function homeView() {
         : !lead ? empty(data?.lastScanAt ? 'עדיין לא זוהו אירועים שמסוקרים ביותר ממקור אחד.' : 'סורקים את אתרי החדשות בפעם הראשונה…', 'הדף יתעדכן לבד.')
         : [
           // Where a news site would put its main photo, we show what this app is about: who is covering the story.
-          el('a', { class: 'lead', href: `#/event/${lead.id}` },
+          el('a', { class: 'lead', href: eventHref(lead) },
             el('span', { class: 'coverage' },
               el('span', { class: 'count' }, el('b', {}, lead.singleSource ? 'חם' : String(lead.sourceCount)), lead.singleSource ? 'מקור אחד' : 'אתרים מסקרים עכשיו'),
               el('span', { class: 'names' }, lead.sources.map(s => el('i', { style: `--c:${s.color}` }, s.name)))),
@@ -251,8 +273,8 @@ function moreEvents(currentId) {
   return el('section', { class: 'screen more-events', 'aria-label': 'עוד אירועים' },
     el('h2', { class: 'sub-head' }, 'עוד אירועים עכשיו'),
     el('ul', { class: 'stories' }, others.map(e => storyRow(e))),
-    el('a', { class: 'list-link', href: '#/elections' }, el('span', { class: 'label' }, icon('grid'), 'בחירות 2026: הסקרים והתחזית'), icon('more')),
-    el('a', { class: 'list-link', href: '#/' }, el('span', { class: 'label' }, icon('house'), 'לכל האירועים של עכשיו'), icon('more')));
+    el('a', { class: 'list-link', href: ELECTIONS_HREF }, el('span', { class: 'label' }, icon('grid'), 'בחירות 2026: הסקרים והתחזית'), icon('more')),
+    el('a', { class: 'list-link', href: HOME_HREF }, el('span', { class: 'label' }, icon('house'), 'לכל האירועים של עכשיו'), icon('more')));
 }
 
 function eventView(id, tab) {
@@ -377,10 +399,10 @@ function topicsView(catId) {
       browsing && ranked.length >= 3 && [
         el('div', { class: 'section-head' }, el('h2', {}, 'לגלות עוד'), el('span', { class: 'rule', 'aria-hidden': 'true' })),
         el('div', { class: 'mosaic' }, ranked.slice(0, 3).map((c, i) =>
-          el('a', { class: `topic-tile${i === 2 ? ' wide' : ''}`, href: `#/topics/${c.id}`, style: `--c:${c.color}` },
+          el('a', { class: `topic-tile${i === 2 ? ' wide' : ''}`, href: sectionHref(c.id), style: `--c:${c.color}` },
             el('span', { class: 'name' }, c.name), el('span', { class: 'count' }, `${counts.get(c.id)} כותרות ב-24 שעות`)))),
         el('ul', { class: 'stories' }, ranked.slice(3).map(c => el('li', {},
-          el('a', { class: 'list-link', href: `#/topics/${c.id}` }, el('span', { class: 'label' }, el('span', { class: 'cat' }, c.name), `${counts.get(c.id)} כותרות`), icon('more'))))),
+          el('a', { class: 'list-link', href: sectionHref(c.id) }, el('span', { class: 'label' }, el('span', { class: 'cat' }, c.name), `${counts.get(c.id)} כותרות`), icon('more'))))),
       ],
       el('div', { class: 'section-head' }, el('h2', {}, browsing ? 'כל הכותרות' : `${filtered.length} כותרות`)),
       filtered.length ? results : empty('לא נמצאו כותרות.', 'נסו מילה אחרת או הסירו את הסינון.')),
@@ -594,7 +616,7 @@ function maybeInstallGuide() {
 const NEWS_ELECTIONS = 'in:news-elections', NEWS_UNTIL = Date.parse('2026-10-23T00:00:00+03:00');
 // `then` runs once the announcement is closed (the install guide comes next, so the two never overlap).
 function maybeElectionsNews(then) {
-  if (now() >= NEWS_UNTIL || location.hash === '#/elections' || document.querySelector('.guide')) return false;
+  if (now() >= NEWS_UNTIL || currentKey() === '#/elections' || document.querySelector('.guide')) return false;
   try { if (localStorage.getItem(NEWS_ELECTIONS)) return false; localStorage.setItem(NEWS_ELECTIONS, '1'); } catch { return false; } // cannot remember → never nag
   let done = false;
   const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); if (!done) { done = true; then?.(); } };
@@ -613,7 +635,7 @@ function maybeElectionsNews(then) {
       el('p', {}, 'איך נכנסים? בשורת המדורים שמתחת לכותרת, מיד אחרי "ראשי":'),
       el('div', { class: 'news-strip', 'aria-hidden': 'true' }, el('span', {}, 'ראשי'), el('span', { class: 'on' }, 'בחירות 2026'), el('span', {}, 'פוליטיקה'), el('span', {}, 'ביטחון'))),
     el('div', { class: 'guide-actions' },
-      el('button', { class: 'guide-btn primary', type: 'button', onclick: () => { close(); location.hash = '#/elections'; } }, 'למדור הבחירות'),
+      el('button', { class: 'guide-btn primary', type: 'button', onclick: () => { close(); go(ELECTIONS_HREF); } }, 'למדור הבחירות'),
       el('button', { class: 'guide-btn', type: 'button', onclick: close }, 'אחר כך')));
   document.body.append(backdrop, box);
   document.addEventListener('keydown', onKey);
@@ -687,7 +709,7 @@ function setNav(key) {
 async function route({ refresh = true } = {}) {
   if (refresh) await load();
   // Read the address only after loading: the reader may have tapped elsewhere while data was loading.
-  const hash = location.hash || '#/';
+  const hash = currentKey();
   let view, nav = 'home', m;
   if ((m = hash.match(/^#\/event\/([\w-]+)(\/sources)?$/))) view = eventView(m[1], m[2] ? 'sources' : 'what');
   else if (hash === '#/live') { view = liveView(); nav = 'live'; }
@@ -704,25 +726,53 @@ async function route({ refresh = true } = {}) {
   return y;
 }
 
-let lastHash = location.hash;
+let lastHash = currentKey();
 // Vercel Web Analytics counts real page loads only, and this app moves between screens by the #… address,
 // so each screen change is reported as a page view of its own. Without this, a visit that read five
 // events looks like a one-page visit — a "bounce".
 function trackScreen() {
   if (typeof window.va !== 'function') return; // local runs and GitHub Pages: no analytics
-  const path = (location.hash || '#/').slice(1) || '/';
-  const route = path.replace(/^\/event\/[^/]+/, '/event/[id]').replace(/^\/topics\/\w+/, '/topics/[section]');
+  const path = location.hash.startsWith('#/') ? location.hash.slice(1) : location.pathname;
+  const route = path.replace(/^\/event\/[^/]+/, '/event/[id]').replace(/^\/e\/[^/]+\/[^/]+/, '/e/[day]/[id]')
+    .replace(/^\/(topics|s)\/\w+/, '/$1/[section]');
   window.va('pageview', { route, path });
 }
 
-window.addEventListener('hashchange', async () => {
+// Moving to another screen: by #/… (hashchange), by a real address (go → pushState), or back/forward (popstate).
+async function onNavigate() {
   trackScreen();
+  const key = currentKey();
   const prevTab = document.activeElement?.id;
-  const sameScreen = lastHash.split('/').slice(0, 3).join('/') === location.hash.split('/').slice(0, 3).join('/');
-  lastHash = location.hash;
+  const sameScreen = lastHash.split('/').slice(0, 3).join('/') === key.split('/').slice(0, 3).join('/');
+  lastHash = key;
   await route({ refresh: false });
   if (prevTab?.startsWith('tab-') && sameScreen) document.querySelector('.tab[aria-selected="true"]')?.focus();
   else window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', onNavigate);
+window.addEventListener('popstate', onNavigate);
+/** Show another screen at a real address without reloading the page. */
+function go(href) {
+  if (!PATHS || href.startsWith('#')) {
+    // a #/… screen: from a real address (/e/…) go back to the root first, so the address stays clean
+    if (location.pathname !== '/' && href.startsWith('#')) { history.pushState(null, '', '/' + href); onNavigate(); }
+    else location.hash = href.replace(/^\//, '#/');
+    return;
+  }
+  if (href === location.pathname + location.hash) return;
+  history.pushState(null, '', href);
+  onNavigate();
+}
+// Links to real addresses stay real links (search engines and "open in a new tab" use them); a plain tap is
+// handled here, so the app does not reload.
+document.addEventListener('click', e => {
+  const a = e.target.closest?.('a[href]');
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+  const href = a.getAttribute('href');
+  const internal = /^\/(e\/|s\/|elections-2026$|$)/.test(href) || (href.startsWith('#/') && location.pathname !== '/');
+  if (!internal || !PATHS) return;
+  e.preventDefault();
+  go(href);
 });
 
 let busy = false;
