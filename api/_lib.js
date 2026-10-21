@@ -57,11 +57,16 @@ ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(
 </html>`;
 }
 
-export function send(res, status, html, { type = 'text/html; charset=utf-8', cache = 300 } = {}) {
+// No election poll numbers from the end of the Friday before election day until the polls close
+// (חוק הבחירות (דרכי תעמולה) 16ה(ח)); we stop an hour early. The same window is in src/elections.js and public/app.js.
+export const POLL_SILENCE = { from: Date.parse('2026-10-23T23:00:00+03:00'), until: Date.parse('2026-10-27T22:00:00+02:00') };
+export const pollSilence = (now = Date.now()) => now >= POLL_SILENCE.from && now < POLL_SILENCE.until;
+
+export function send(res, status, html, { type = 'text/html; charset=utf-8', cache = 300, swr = 86400 } = {}) {
   res.statusCode = status;
   res.setHeader('Content-Type', type);
   // the CDN keeps a page for a few minutes and may serve the old copy while it fetches a new one
-  res.setHeader('Cache-Control', status === 200 ? `public, s-maxage=${cache}, stale-while-revalidate=86400` : 'public, s-maxage=60');
+  res.setHeader('Cache-Control', status === 200 ? `public, s-maxage=${cache}, stale-while-revalidate=${swr}` : 'public, s-maxage=60');
   res.end(html);
 }
 

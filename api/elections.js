@@ -1,15 +1,20 @@
 // /elections-2026 — the elections section as a page of its own that search engines can read without running the app:
 // the forecast, a table of every channel's latest poll per party with the average, and links to each report.
 // The numbers are the ones the app shows (elections.json, made by src/elections.js).
-import { dataFile, page, send, esc, safeUrl, time, SITE, BRAND } from './_lib.js';
+import { dataFile, page, send, esc, safeUrl, time, SITE, BRAND, POLL_SILENCE, pollSilence } from './_lib.js';
 
 const dayMonth = iso => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
 
 export default async function handler(req, res) {
-  const e = await dataFile('elections');
+  // by the clock, whatever the data file says; and close to the window a cached copy may live only briefly
+  const now = Date.now(), silence = pollSilence(now), nearSilence = now > POLL_SILENCE.from - 86400_000 && now < POLL_SILENCE.until;
+  const cache = nearSilence ? { cache: 120, swr: 0 } : { cache: 1800 };
+  const e = silence ? { silence: true } : await dataFile('elections');
   const path = '/elections-2026';
   const title = 'סקרי הבחירות 2026: ממוצע כל הסקרים ותחזית מנדטים · ' + BRAND;
   if (!e || e.silence || !e.parties) {
+    if (e?.silence) return send(res, 200, page({ title, description: 'סקרי המנדטים של ערוצי הטלוויזיה לקראת הבחירות לכנסת 2026. בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.', path, noindex: false,
+      body: '<div class="page-bar"><h1>סקרי הבחירות 2026</h1></div><main class="screen"><div class="empty"><p>בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.</p><p>הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות ב-27 באוקטובר ב-22:00.</p></div></main>' }), { cache: 120, swr: 0 });
     const why = e?.silence ? 'בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים. הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות.' : 'הסקרים עוד לא נטענו. נסו שוב בעוד כמה דקות.';
     return send(res, 200, page({ title, description: 'סקרי המנדטים של ערוצי הטלוויזיה לקראת הבחירות לכנסת 2026: ממוצע ותחזית.', path,
       body: `<div class="page-bar"><h1>סקרי הבחירות 2026</h1></div><main class="screen"><div class="empty"><p>${esc(why)}</p></div></main>` }), { cache: 600 });
@@ -54,5 +59,5 @@ export default async function handler(req, res) {
   send(res, 200, page({ title, description, path, body,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: 'סקרי הבחירות 2026: ממוצע כל הסקרים ותחזית', description, inLanguage: 'he', url: SITE + path,
       dateModified: new Date(e.updatedAt).toISOString(), isPartOf: { '@type': 'WebSite', name: BRAND, url: SITE },
-      about: { '@type': 'Event', name: 'הבחירות לכנסת ה-26', startDate: '2026-10-27', location: { '@type': 'Country', name: 'ישראל' } } } }), { cache: 1800 });
+      about: { '@type': 'Event', name: 'הבחירות לכנסת ה-26', startDate: '2026-10-27', location: { '@type': 'Country', name: 'ישראל' } } } }), cache);
 }

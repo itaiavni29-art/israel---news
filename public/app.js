@@ -644,6 +644,9 @@ function maybeElectionsNews(then) {
 
 // ---------- "בחירות 2026": the channels' polls, an average per party and a forecast (see src/elections.js) ----------
 let elections = null, electionsAt = 0;
+// The legal poll silence (same window as api/_lib.js): checked by the clock too, so numbers already loaded
+// in an open tab disappear on time even before the data file changes.
+const inPollSilence = () => now() >= Date.parse('2026-10-23T23:00:00+03:00') && now() < Date.parse('2026-10-27T22:00:00+02:00');
 const dayMonth = iso => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
 async function electionsView() {
   document.title = 'בחירות 2026: סקרים, ממוצע ותחזית · ' + BRAND;
@@ -655,7 +658,7 @@ async function electionsView() {
   const bar = el('div', { class: 'page-bar' }, el('h1', {}, 'בחירות 2026'),
     daysLeft > 0 ? el('span', {}, 'עוד ', el('b', {}, daysLeft === 1 ? 'יום אחד' : `${daysLeft} ימים`), ' לבחירות') : daysLeft === 0 ? el('b', {}, 'היום יום הבחירות') : null);
   if (!e) return [top, bar, el('main', { class: 'screen' }, empty('הסקרים עוד לא נטענו.', 'נסו שוב בעוד כמה דקות.'))];
-  if (e.silence) return [top, bar, el('main', { class: 'screen' }, empty('בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.', 'הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות.'))];
+  if (e.silence || inPollSilence()) return [top, bar, el('main', { class: 'screen' }, empty('בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.', 'הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות.'))];
 
   const parties = e.parties.filter(p => p.average > 0 || p.projected > 0).sort((a, b) => b.projected - a.projected || b.average - a.average);
   const max = Math.max(...e.polls.flatMap(p => Object.values(p.seats)), 1);

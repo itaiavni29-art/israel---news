@@ -18,7 +18,7 @@ export const DEFAULTS = {
   page: 'Opinion polling for the 2026 Israeli legislative election',
   section: '2026',
   electionDay: '2026-10-27',
-  silenceFrom: '2026-10-23T00:00:00+03:00', // the Friday before election day
+  silenceFrom: '2026-10-23T23:00:00+03:00', // the law: from the END of the Friday before election day (16ה(ח)); we stop an hour early
   silenceUntil: '2026-10-27T22:00:00+02:00', // the polls close
   refreshHours: 3,
   maxPollAgeDays: 21,
@@ -64,27 +64,30 @@ function splitCell(raw) {
 const span = attrs => +(/colspan\s*=\s*"?(\d+)/i.exec(attrs)?.[1] ?? 1);
 const cellsOf = (row, mark) => ('\n' + row).split(new RegExp('\\n\\' + mark)).slice(1).map(splitCell);
 
-/**
- * The seat-projection table of one year → { columns, polls }.
- * columns: [{ key, titles, span, gov }] — the parties, in the table's order.
- * polls: [{ date, firm, publisher, url, sample, seats: {key: n}, below: {key: '(1.9%)'}, total }] newest first.
- */
-export function parsePolls(wikitext, section = '2026') {
-  const from = wikitext.indexOf('== Seat projections');
-  const start = wikitext.indexOf(`=== ${section} ===`, Math.max(0, from));
-  if (start < 0) throw new Error(`section "${section}" not found`);
-  const open = wikitext.indexOf('{|', start), close = wikitext.indexOf('\n|}', open);
-  if (open < 0 || close < 0) throw new Error('polls table not found');
-  const rows = wikitext.slice(open, close).split(/\n\|-[^\n]*/);
+/** Newlines inside {{templates}} and <ref>…</ref> become spaces, so a reference written over two lines stays in its cell. */
+function flatten(text) {
+  let out = '', depth = 0, inRef = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text.startsWith('{{', i)) { depth++; out += '{{'; i++; continue; }
+    if (text.startsWith('}}', i) && depth) { depth--; out += '}}'; i++; continue; }
+    if (/^<ref\b[^>]*[^/]>/i.test(text.slice(i, i + 300))) inRef = true; // <ref …> opens; a self-closing <ref …/> does not
+    if (inRef && text.startsWith('</ref>', i)) inRef = false;
+    out += text[i] === '\n' && (depth || inRef) ? ' ' : text[i];
+  }
+  return out;
+}
 
+/** One seat-projection table → { columns, polls }. */
+function parseTable(table) {
+  const rows = flatten(table).split(/\n\|-[^\n]*/);
   // header: Fieldwork date · Polling firm · Publisher · Sample size · the parties… · Others · Gov.
   const head = cellsOf(rows[0], '!'), columns = [];
   const first = head.findIndex(c => /Sample/i.test(c.content));
-  if (first < 0) throw new Error('unexpected table header');
+  if (first < 0) return { columns: [], polls: [] }; // some other table in the section
   for (const c of head.slice(first + 1)) {
     if (/^Others\b/i.test(plain(c.content))) break;
     const titles = [...noRefs(c.content).matchAll(/\[\[([^\]|]+)/g)].map(m => m[1].trim());
-    if (!titles.length) throw new Error('party column without a link: ' + c.content.slice(0, 60));
+    if (!titles.length) titles.push(plain(c.content)); // a party without a Wikipedia page of its own
     columns.push({ key: titles[0], titles, span: span(c.attrs), gov: /D9D9F8/i.test(c.attrs) });
   }
   const width = columns.reduce((n, c) => n + c.span, 0);
@@ -110,6 +113,31 @@ export function parsePolls(wikitext, section = '2026') {
     }
     if (ok && pos >= width) polls.push(poll);
   }
+  return { columns, polls };
+}
+
+/**
+ * The seat-projection tables of one year → { columns, polls }. A year can hold several tables: when a party
+ * leaves the race the editors start a new table without its column (2026: Blue and White, 19 October).
+ * columns: [{ key, titles, span, gov }] — the newest table's parties first, then any that only older ones have.
+ * polls: [{ date, firm, publisher, url, sample, seats: {key: n}, below: {key: '(1.9%)'}, total }] newest first.
+ */
+export function parsePolls(wikitext, section = '2026') {
+  const from = wikitext.indexOf('== Seat projections');
+  const start = wikitext.indexOf(`=== ${section} ===`, Math.max(0, from));
+  if (start < 0) throw new Error(`section "${section}" not found`);
+  const next = wikitext.slice(start + 8).search(/\n==[^=]|\n===[^=]/), end = next < 0 ? wikitext.length : start + 8 + next;
+  const columns = [], polls = [];
+  for (let open = wikitext.indexOf('{|', start); open >= 0 && open < end; open = wikitext.indexOf('{|', open + 2)) {
+    const close = wikitext.indexOf('\n|}', open);
+    if (close < 0) break;
+    const t = parseTable(wikitext.slice(open, close));
+    for (const c of t.columns) if (!columns.some(x => x.key === c.key)) columns.push(c);
+    polls.push(...t.polls);
+    open = close;
+  }
+  if (!columns.length) throw new Error('polls table not found');
+  polls.sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0));
   return { columns, polls };
 }
 
