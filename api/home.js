@@ -16,7 +16,6 @@ export default async function handler(req, res) {
   const body = `<main class="screen">
         <h1 class="home-h1">זמן אמת חדשות – מה מסוקר עכשיו בכל אתרי החדשות</h1>
         <p class="standfirst">כל 10 דקות נסרקים אתרי החדשות הגדולים בישראל. אירוע שכמה אתרים מסקרים מופיע כאן עם סיכום קצר משלנו, רשימה של מי מדווח עליו וקישורים לכתבות המקוריות.</p>
-        <p><a href="/elections-2026"><b>סקרי הבחירות 2026: ממוצע כל הסקרים ותחזית מנדטים ←</b></a></p>
         <nav class="home-sections" aria-label="מדורים">${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}">חדשות ${esc(name)}</a>`).join(' · ')} · <a href="/latest">כל האירועים האחרונים</a> · <a href="/about">אודות</a></nav>
         ${list ? `<h2 class="sub-head">האירועים של עכשיו</h2><ul class="stories">${list}</ul>` : ''}
       </main>`;

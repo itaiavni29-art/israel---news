@@ -30,10 +30,6 @@
       "destination": "/api/sitemap"
     },
     {
-      "source": "/elections-2026",
-      "destination": "/api/elections"
-    },
-    {
       "source": "/news-sitemap.xml",
       "destination": "/api/news-sitemap"
     },
@@ -44,18 +40,18 @@
   ],
   "redirects": [
     {
-      "source": "/elections",
-      "destination": "/elections-2026",
+      "source": "/elections-2026",
+      "destination": "/",
       "permanent": true
     },
     {
-      "source": "/elections-2026/",
-      "destination": "/elections-2026",
+      "source": "/elections",
+      "destination": "/",
       "permanent": true
     },
     {
       "source": "/bchirot",
-      "destination": "/elections-2026",
+      "destination": "/",
       "permanent": true
     },
     {

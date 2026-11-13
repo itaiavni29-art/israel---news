@@ -222,6 +222,6 @@
   "leadMinSources": 3,
   "leadHoldMinutes": 120,
   "elections": {
-    "enabled": true
+    "enabled": false
   }
 }

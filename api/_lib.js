@@ -49,18 +49,13 @@ ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(
 <body data-screen="page">
 <div class="shell" style="padding-bottom:32px">
   <header class="app-header" style="grid-template-columns:1fr"><a class="brand" href="/"><img class="brand-mark" src="/logo-mark-white.svg" alt="" width="26" height="26"><span class="brand-name">${BRAND}</span></a></header>
-  <nav class="sections" aria-label="מדורים"><a href="/">ראשי</a><a href="/elections-2026"${path === '/elections-2026' ? ' aria-current="page"' : ''}>בחירות 2026</a>${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}"${path === '/s/' + id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
+  <nav class="sections" aria-label="מדורים"><a href="/">ראשי</a>${Object.entries(CATEGORIES).map(([id, name]) => `<a href="/s/${id}"${path === '/s/' + id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
   ${body}
   <p class="footnote" style="padding:18px"><a href="/about">אודות ${BRAND}</a> · <a href="/">לעמוד הראשי של ${BRAND}: החדשות שמסוקרות עכשיו בכמה אתרים</a><br>האתר לא מעתיק כתבות: רק כותרות, קישורים לאתרים המקוריים וסיכום אוטומטי.</p>
 </div>
 </body>
 </html>`;
 }
-
-// No election poll numbers from the end of the Friday before election day until the polls close
-// (חוק הבחירות (דרכי תעמולה) 16ה(ח)); we stop an hour early. The same window is in src/elections.js and public/app.js.
-export const POLL_SILENCE = { from: Date.parse('2026-10-23T23:00:00+03:00'), until: Date.parse('2026-10-27T22:00:00+02:00') };
-export const pollSilence = (now = Date.now()) => now >= POLL_SILENCE.from && now < POLL_SILENCE.until;
 
 export function send(res, status, html, { type = 'text/html; charset=utf-8', cache = 300, swr = 86400 } = {}) {
   res.statusCode = status;

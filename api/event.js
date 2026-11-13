@@ -38,7 +38,6 @@ export default async function handler(req, res) {
     ${more.length ? `<h2 class="sub-head">עוד אירועים</h2>
     <ul class="stories">${more.map(e => `<li><a class="story" href="/e/${e.day}/${e.id}"><span class="copy"><span class="row"><span class="cat">${esc(CATEGORIES[e.category] ?? 'חדשות')}</span></span><h3>${esc(e.title)}</h3>
       <span class="meta">${time(e.at)} · ${e.sources === 1 ? 'מקור אחד' : e.sources + ' מקורות'}</span></span><span class="read-more">קרא עוד</span></a></li>`).join('')}</ul>` : ''}
-    <a class="list-link" href="/#/elections" style="border-top:1px solid var(--line);font-weight:700">בחירות 2026: הסקרים והתחזית ←</a>
     <a class="list-link" href="/" style="border-top:1px solid var(--line);font-weight:700">לכל החדשות של עכשיו ←</a>
   </main>`;
 

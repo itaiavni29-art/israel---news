@@ -79,7 +79,6 @@ const dayOf = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem
 /** An event's address: its own page (/e/<day>/<id>) when it has one — every event with a summary does. */
 const eventHref = ev => (PATHS && ev.summary?.text ? `/e/${dayOf(ev.detectedAt)}/${shortId(ev.id)}` : `#/event/${ev.id}`);
 const sectionHref = id => (PATHS ? `/s/${id}` : `#/topics/${id}`);
-const ELECTIONS_HREF = PATHS ? '/elections-2026' : '#/elections';
 const HOME_HREF = PATHS ? '/' : '#/';
 const allKnownEvents = () => [...(data?.events ?? []), ...store.get(SAVED).map(s => s.event), ...store.get(HISTORY).map(h => h.event)];
 /** The screen to show, as a #/… key, whether the address is a real path or a #/… one. */
@@ -89,7 +88,6 @@ function currentKey() {
   let m;
   if ((m = p.match(/^\/e\/(\d{4}-\d\d-\d\d)\/([0-9a-f]{6,12})$/))) { const ev = allKnownEvents().find(e => shortId(e.id) === m[2]); return ev ? `#/event/${ev.id}` : '#/'; }
   if ((m = p.match(/^\/s\/(\w+)$/))) return `#/topics/${m[1]}`;
-  if (p === '/elections-2026') return '#/elections';
   return '#/';
 }
 
@@ -179,7 +177,7 @@ document.documentElement.classList.toggle('big-text', bigText());
 function sectionTabs(active = null) {
   const link = (href, label, on) => el('a', { href, 'aria-current': on ? 'page' : null }, label);
   return el('nav', { class: 'sections', 'aria-label': 'מדורים' },
-    link(HOME_HREF, 'ראשי', active == null), link(ELECTIONS_HREF, 'בחירות 2026', active === 'elections'), (data?.categories ?? []).map(c => link(sectionHref(c.id), c.name, active === c.id)));
+    link(HOME_HREF, 'ראשי', active == null), (data?.categories ?? []).map(c => link(sectionHref(c.id), c.name, active === c.id)));
 }
 
 function updatedText() {
@@ -266,14 +264,13 @@ function homeView() {
   ];
 }
 
-// What to read next: the other events on the list right now, and the elections section.
+// What to read next: the other events on the list right now.
 function moreEvents(currentId) {
   const others = (data?.events ?? []).filter(e => e.id !== currentId).slice(0, 5);
   if (!others.length) return null;
   return el('section', { class: 'screen more-events', 'aria-label': 'עוד אירועים' },
     el('h2', { class: 'sub-head' }, 'עוד אירועים עכשיו'),
     el('ul', { class: 'stories' }, others.map(e => storyRow(e))),
-    el('a', { class: 'list-link', href: ELECTIONS_HREF }, el('span', { class: 'label' }, icon('grid'), 'בחירות 2026: הסקרים והתחזית'), icon('more')),
     el('a', { class: 'list-link', href: HOME_HREF }, el('span', { class: 'label' }, icon('house'), 'לכל האירועים של עכשיו'), icon('more')));
 }
 
@@ -611,97 +608,6 @@ function maybeInstallGuide() {
   if (s.visits % 3 === 1) openInstallGuide();
 }
 
-// A one-time announcement of the new elections section: what it is and where to find it.
-// Shown once per device (remembered in localStorage), and not at all once the legal poll-silence period begins.
-const NEWS_ELECTIONS = 'in:news-elections', NEWS_UNTIL = Date.parse('2026-10-23T00:00:00+03:00');
-// `then` runs once the announcement is closed (the install guide comes next, so the two never overlap).
-function maybeElectionsNews(then) {
-  if (now() >= NEWS_UNTIL || currentKey() === '#/elections' || document.querySelector('.guide')) return false;
-  try { if (localStorage.getItem(NEWS_ELECTIONS)) return false; localStorage.setItem(NEWS_ELECTIONS, '1'); } catch { return false; } // cannot remember → never nag
-  let done = false;
-  const close = () => { backdrop.remove(); box.remove(); document.removeEventListener('keydown', onKey); if (!done) { done = true; then?.(); } };
-  const onKey = e => { if (e.key === 'Escape') close(); };
-  const backdrop = el('div', { class: 'sheet-backdrop', onclick: close });
-  const box = el('section', { class: 'guide news', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'news-title' },
-    el('div', { class: 'guide-head' },
-      el('div', {}, el('span', { class: 'news-tag' }, 'חדש באתר'), el('h2', { id: 'news-title' }, 'מדור בחירות 2026'),
-        el('p', {}, 'כל סקרי המנדטים של ערוצי הטלוויזיה במקום אחד, לקראת הבחירות ב־27 באוקטובר.')),
-      el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
-    el('ul', { class: 'news-points' },
-      el('li', {}, el('b', {}, 'התחזית של זמן אמת: '), 'מי המפלגה הגדולה הצפויה, ובכמה מנדטים.'),
-      el('li', {}, el('b', {}, 'גרף לכל מפלגה: '), 'כמה נותנים לה חדשות 12, רשת 13, כאן 11, ערוץ 14 ו־i24NEWS, והממוצע.'),
-      el('li', {}, el('b', {}, 'מתעדכן כל יום, '), 'עם כל סקר חדש שמתפרסם.')),
-    el('div', { class: 'news-where' },
-      el('p', {}, 'איך נכנסים? בשורת המדורים שמתחת לכותרת, מיד אחרי "ראשי":'),
-      el('div', { class: 'news-strip', 'aria-hidden': 'true' }, el('span', {}, 'ראשי'), el('span', { class: 'on' }, 'בחירות 2026'), el('span', {}, 'פוליטיקה'), el('span', {}, 'ביטחון'))),
-    el('div', { class: 'guide-actions' },
-      el('button', { class: 'guide-btn primary', type: 'button', onclick: () => { close(); go(ELECTIONS_HREF); } }, 'למדור הבחירות'),
-      el('button', { class: 'guide-btn', type: 'button', onclick: close }, 'אחר כך')));
-  document.body.append(backdrop, box);
-  document.addEventListener('keydown', onKey);
-  return true;
-}
-
-// ---------- "בחירות 2026": the channels' polls, an average per party and a forecast (see src/elections.js) ----------
-let elections = null, electionsAt = 0;
-// The legal poll silence (same window as api/_lib.js): checked by the clock too, so numbers already loaded
-// in an open tab disappear on time even before the data file changes.
-const inPollSilence = () => now() >= Date.parse('2026-10-23T23:00:00+03:00') && now() < Date.parse('2026-10-27T22:00:00+02:00');
-const dayMonth = iso => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
-async function electionsView() {
-  document.title = 'בחירות 2026: סקרים, ממוצע ותחזית · ' + BRAND;
-  if (!elections || now() - electionsAt > 10 * 60_000) {
-    try { const r = await fetch(dataUrl('elections.json'), { cache: 'no-store' }); if (r.ok) { elections = await r.json(); electionsAt = now(); } } catch { /* keep what we have */ }
-  }
-  const e = elections, top = [header(), sectionTabs('elections')];
-  const daysLeft = e ? Math.ceil((Date.parse(e.electionDay + 'T00:00:00+03:00') - now()) / 86400_000) : null;
-  const bar = el('div', { class: 'page-bar' }, el('h1', {}, 'בחירות 2026'),
-    daysLeft > 0 ? el('span', {}, 'עוד ', el('b', {}, daysLeft === 1 ? 'יום אחד' : `${daysLeft} ימים`), ' לבחירות') : daysLeft === 0 ? el('b', {}, 'היום יום הבחירות') : null);
-  if (!e) return [top, bar, el('main', { class: 'screen' }, empty('הסקרים עוד לא נטענו.', 'נסו שוב בעוד כמה דקות.'))];
-  if (e.silence || inPollSilence()) return [top, bar, el('main', { class: 'screen' }, empty('בימים שלפני הבחירות אסור על פי חוק לפרסם סקרים.', 'הסקרים, הממוצע והתחזית יחזרו לכאן אחרי סגירת הקלפיות.'))];
-
-  const parties = e.parties.filter(p => p.average > 0 || p.projected > 0).sort((a, b) => b.projected - a.projected || b.average - a.average);
-  const max = Math.max(...e.polls.flatMap(p => Object.values(p.seats)), 1);
-  const seatsBar = el('div', { class: 'seats-bar', role: 'img', 'aria-label': 'חלוקת 120 המנדטים לפי התחזית' },
-    parties.filter(p => p.projected).map(p => el('span', { style: `flex:${p.projected};background:${p.color}`, title: `${p.name} ${p.projected}` }, p.projected >= 5 ? p.projected : '')));
-  const [first, ...rest] = parties, podium = rest.slice(0, 3);
-
-  return [top, bar,
-    el('section', { class: 'forecast', 'aria-label': 'התחזית' },
-      el('span', { class: 'forecast-label' }, 'התחזית של זמן אמת'),
-      el('p', { class: 'forecast-kicker' }, 'המפלגה הגדולה הצפויה'),
-      el('div', { class: 'forecast-winner' },
-        el('h2', {}, first.name),
-        el('div', { class: 'forecast-seats', style: `background:${first.color}` }, el('b', {}, first.projected), el('span', {}, 'מנדטים'))),
-      el('ol', { class: 'forecast-next', 'aria-label': 'המפלגות הבאות' }, podium.map((p, i) => el('li', {},
-        el('span', { class: 'place' }, i + 2), el('i', { style: `background:${p.color}` }), el('span', { class: 'name' }, p.name), el('b', {}, p.projected)))),
-      el('p', { class: 'forecast-text' }, e.forecast.text),
-      seatsBar,
-      el('ul', { class: 'legend' }, parties.filter(p => p.projected).map(p => el('li', {}, el('i', { style: `background:${p.color}` }), p.name, ' ', el('b', {}, p.projected)))),
-      el('p', { class: 'forecast-note' }, `מחושב אוטומטית מהסקר האחרון של ${e.polls.length} ערוצים ומנוסח על ידי בינה מלאכותית. זו הערכה ולא תחזית מקצועית: סקרים עלולים לטעות, ומפלגות שקרובות לאחוז החסימה יכולות לשנות את התמונה.`)),
-    el('main', { class: 'screen elections' },
-
-    el('h2', { class: 'sub-head first' }, 'כמה מנדטים נותן כל ערוץ'),
-    el('ul', { class: 'party-list' }, parties.map(p => el('li', { class: 'party' },
-      el('div', { class: 'party-head' }, el('i', { style: `background:${p.color}` }), el('h3', {}, p.name),
-        el('span', { class: 'avg' }, 'ממוצע ', el('b', {}, p.average))),
-      el('div', { class: 'channel-bars' }, e.polls.map(poll => { const n = poll.seats[p.key] ?? 0;
-        return el('div', { class: 'channel-bar' }, el('span', { class: 'who' }, poll.name),
-          el('div', { class: 'track' }, el('i', { style: `width:${n / max * 100}%;background:${p.color}` })),
-          n ? el('b', {}, n) : el('span', { class: 'under' }, 'לא עוברת'));
-      }))))),
-
-    el('h2', { class: 'sub-head' }, 'הסקרים שנכללו'),
-    el('ul', { class: 'source-list polls' }, e.polls.map(poll => el('li', {},
-      el('span', { class: 'src-tag' }, poll.name),
-      el('a', { class: 'source-item', href: safeUrl(poll.url ?? e.source.url), target: '_blank', rel: 'noopener noreferrer' },
-        el('h3', {}, `סקר המנדטים מ-${dayMonth(poll.date)}`),
-        el('span', { class: 'meta' }, poll.sample ? `${poll.sample} משיבים · ` : '', el('b', {}, 'לדיווח על הסקר ↗')))))),
-    el('p', { class: 'ai-note' }, 'הנתונים נלקחים מטבלת הסקרים של ',
-      el('a', { href: safeUrl(e.source.url), target: '_blank', rel: 'noopener noreferrer' }, e.source.name),
-      ', שמרכזת את הסקרים שפרסמו הערוצים. הממוצע הוא ממוצע פשוט של הסקר האחרון מכל ערוץ. עודכן: ', ago(e.updatedAt), '.'))];
-}
-
 // ---------- router ----------
 function setNav(key) {
   for (const a of document.querySelectorAll('.nav-item')) {
@@ -718,7 +624,6 @@ async function route({ refresh = true } = {}) {
   else if (hash === '#/live') { view = liveView(); nav = 'live'; }
   else if ((m = hash.match(/^#\/topics(?:\/(\w+))?$/))) { view = topicsView(m[1]); nav = 'topics'; }
   else if ((m = hash.match(/^#\/saved(\/history)?$/))) { view = savedView(m[1] ? 'history' : 'saved'); nav = 'saved'; }
-  else if (hash === '#/elections') view = await electionsView();
   else if (hash === '#/status') { view = await statusView(); nav = 'saved'; }
   else view = homeView();
   setNav(nav);
@@ -772,7 +677,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest?.('a[href]');
   if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
   const href = a.getAttribute('href');
-  const internal = /^\/(e\/|s\/|elections-2026$|$)/.test(href) || (href.startsWith('#/') && location.pathname !== '/');
+  const internal = /^\/(e\/|s\/|$)/.test(href) || (href.startsWith('#/') && location.pathname !== '/');
   if (!internal || !PATHS) return;
   e.preventDefault();
   go(href);
@@ -816,8 +721,7 @@ async function checkAppVersion() {
 // Pull new events automatically: every 30 s, and right away when the page comes back into view
 // (switching tabs, unlocking the phone, reopening the home-screen app, reconnecting).
 await route();
-// first the news about the elections section (once), then the home-screen guide (as before: every third visit)
-if (!maybeElectionsNews(() => setTimeout(maybeInstallGuide, 400))) maybeInstallGuide();
+maybeInstallGuide();
 checkAppVersion();
 setInterval(tick, REFRESH_MS);
 setInterval(checkAppVersion, 10 * 60_000);
