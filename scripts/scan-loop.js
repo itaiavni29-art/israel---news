@@ -52,6 +52,9 @@ while (Date.now() < deadline) {
   await scanner.scanOnce();
   if (config.elections?.enabled) log.info('[elections] ' + await updateElections(dir, { config: config.elections, summarizer: scanner.summarizer, log }));
   publish();
+  // push notifications: the site decides whether a big story just appeared (api/push-tick.js); never blocks the loop
+  if (repo) await fetch('https://zmanemetnews.co.il/api/push-tick', { method: 'POST', signal: AbortSignal.timeout(60_000) })
+    .then(r => r.text()).then(t => log.info('[push] ' + t.slice(0, 200))).catch(e => log.warn?.('[push] ' + e.message));
   if (codeChanged()) { log.info('[loop] new code on main — handing over to a fresh job'); break; }
   const wait = Math.max(0, intervalMs - (Date.now() - started));
   if (Date.now() + wait >= deadline) break;

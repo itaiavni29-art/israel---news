@@ -242,6 +242,7 @@ function homeView() {
       el('span', { class: 'live-src' }, latestBreaking.sourceName),
       el('span', { class: 'update', lang: langOf(latestBreaking.title) }, latestBreaking.title)),
     isStale() && el('p', { class: 'scan-status stale' }, updatedText()),
+    pushCard(),
     el('main', { class: 'screen home', id: 'main' },
       data?.error && !events.length ? empty('לא הצלחנו לטעון את האירועים.', 'ננסה שוב בעוד דקה.')
         : !lead ? empty(data?.lastScanAt ? 'עדיין לא זוהו אירועים שמסוקרים ביותר ממקור אחד.' : 'סורקים את אתרי החדשות בפעם הראשונה…', 'הדף יתעדכן לבד.')
@@ -466,6 +467,8 @@ function openMenu() {
       el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'סגירה', onclick: close }, icon('x'))),
     link('#/', 'house', 'ראשי'), link('#/live', 'zap', 'מבזקים'), link('#/topics', 'grid', 'מדורים'), link('#/saved', 'bookmark', 'שמורים'), link('#/status', 'settings', 'מצב המקורות'),
     el('a', { href: '#', onclick: async e => { e.preventDefault(); close(); if (!(await installNow())) openInstallGuide(); } }, icon('house'), 'הוספה למסך הבית'),
+    el('a', { href: '#', class: 'push-toggle', onclick: async e => { e.preventDefault(); close(); if (pushState() === 'granted' && await currentSubscription()) await disablePush(); else await enablePush(); } },
+      icon('bell'), pushState() === 'granted' ? 'התראות: מופעלות (לחיצה מפסיקה)' : 'הפעלת התראות על סיפורים גדולים'),
     el('p', { class: 'about' }, 'האתר סורק אתרי חדשות ישראליים כל כמה דקות, ומציג רק אירועים שמסוקרים בלפחות שני אתרים (או כתבה "חמה" ממקור אחד, מסומנת). מוצגות כותרות וקישורים בלבד, והקריאה עצמה נעשית באתר המקורי.'));
   document.body.append(backdrop, sheet);
   document.addEventListener('keydown', onKey);
@@ -515,7 +518,53 @@ async function installNow() {
   return true;
 }
 // A service worker that caches nothing (the news must always be fresh): some browsers only offer installation to sites that have one.
-if ('serviceWorker' in navigator && !LOCAL) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && !LOCAL) navigator.serviceWorker.register(PATHS ? '/sw.js' : 'sw.js').catch(() => {});
+
+// ---------- push notifications: a big story, the moment several sites are covering it ----------
+// The browser's own push service delivers them (no account, nothing to install). The server side is
+// api/push-subscribe.js (who asked) and api/push-tick.js (what to send, called by the scanner after every scan).
+const VAPID_PUBLIC = 'BNUfRslCEVKromXnR261pF7HKVuMyQyhzulP4M9ywnFAHYF8O74TzAtHkyGgWGFJWWqL-bNrV7Jy31zNWZnCTv8';
+const PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && PATHS && !LOCAL;
+const PUSH_CARD = 'in:push-card';
+const pushState = () => (!PUSH_OK ? (isIOS && !isInstalled() ? 'ios-install' : 'unsupported') : Notification.permission); // default | granted | denied
+async function currentSubscription() { try { return await (await navigator.serviceWorker.ready).pushManager.getSubscription(); } catch { return null; } }
+const keyBytes = b64 => { const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); };
+async function enablePush() {
+  if (pushState() === 'ios-install') { toast('באייפון: קודם מוסיפים את האתר למסך הבית, ואז מפעילים התראות'); openInstallGuide(); return false; }
+  if (!PUSH_OK) { toast('הדפדפן הזה לא תומך בהתראות'); return false; }
+  const p = await Notification.requestPermission();
+  if (p !== 'granted') { toast(p === 'denied' ? 'ההתראות חסומות בהגדרות הדפדפן' : 'ההתראות לא הופעלו'); return false; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC) });
+    const r = await fetch('/api/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast('ההתראות הופעלו: נודיע כשסיפור גדול מסוקר בכמה אתרים');
+    return true;
+  } catch { toast('לא הצלחנו להפעיל את ההתראות. נסו שוב בעוד רגע'); return false; }
+}
+async function disablePush() {
+  const sub = await currentSubscription();
+  if (sub) { fetch('/api/push-subscribe', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
+  toast('ההתראות הופסקו');
+}
+// The card on the home page: an invitation, until the reader turns notifications on or says no thanks.
+function pushCard() {
+  const st = pushState();
+  if (st === 'unsupported' || st === 'denied' || st === 'granted') return null;
+  try { if (localStorage.getItem(PUSH_CARD)) return null; } catch { return null; }
+  const close = () => { try { localStorage.setItem(PUSH_CARD, '1'); } catch {} ; card.remove(); };
+  const card = el('section', { class: 'push-card', 'aria-label': 'התראות' },
+    el('div', { class: 'push-demo', 'aria-hidden': 'true' },
+      el('div', { class: 'top' }, el('span', { class: 'ic' }, brandMark()), el('b', {}, BRAND), el('span', { class: 'when' }, 'עכשיו')),
+      el('p', { class: 'ttl' }, data?.events?.[0]?.title ?? 'סיפור גדול מסוקר עכשיו'),
+      el('p', { class: 'sub' }, data?.events?.[0] ? `${data.events[0].sourceCount} אתרים מסקרים עכשיו: ${data.events[0].sources.slice(0, 3).map(s => s.name).join(', ')}` : 'כמה אתרים מסקרים עכשיו')),
+    el('p', { class: 'push-text' }, el('b', {}, 'רוצים לדעת כשקורה משהו גדול?'), ' נשלח התראה כשסיפור מסוקר בכמה אתרים, לכל היותר פעם בחצי שעה, ולא בלילה.'),
+    el('div', { class: 'push-actions' },
+      el('button', { class: 'guide-btn primary', type: 'button', onclick: async () => { if (await enablePush()) close(); } }, st === 'ios-install' ? 'איך מפעילים באייפון' : 'הפעלת התראות'),
+      el('button', { class: 'guide-btn', type: 'button', onclick: close }, 'לא תודה')));
+  return card;
+}
 
 // Drawings for the steps: schematic, drawn here (not screenshots of anyone's interface).
 const art = body => { const d = el('div', { class: 'guide-art', 'aria-hidden': 'true' }); d.innerHTML = `<svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg" font-family="Arimo, Arial, sans-serif">${body}</svg>`; return d; };

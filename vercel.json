@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "installCommand": "",
+  "installCommand": "npm install --prefix api --omit=dev --no-audit --no-fund",
   "buildCommand": "",
   "outputDirectory": "public",
   "git": {
@@ -68,6 +68,9 @@
   "functions": {
     "api/home.js": {
       "includeFiles": "public/app.html"
+    },
+    "api/push-tick.js": {
+      "maxDuration": 60
     }
   }
 }

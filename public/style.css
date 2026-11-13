@@ -558,3 +558,19 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .home-sections a, .other-sections a { color: var(--brand); font-weight: 700; text-decoration: none; }
 .source-item .headline { font-size: 18px; font-weight: 700; line-height: 1.35; }
 .about p { font-size: 17px; line-height: 1.7; }
+
+/* the invitation to notifications: a sample of the notification itself, the offer, two buttons */
+.push-card { margin: 14px var(--gutter) 6px; padding: 16px; border-radius: var(--radius-lg); background: linear-gradient(160deg, #1447d6, #0f1f4d); color: #fff; display: flex; flex-direction: column; gap: 12px; }
+.push-demo { padding: 12px 14px 14px; border-radius: 18px; background: rgba(250,250,255,.95); color: var(--ink); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.push-demo .top { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.push-demo .ic { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); display: grid; place-items: center; }
+.push-demo .ic .brand-mark { width: 18px; height: 18px; }
+.push-demo .when { margin-inline-start: auto; color: var(--muted); font-size: 13px; }
+.push-demo .ttl { margin-top: 8px; font-size: 16px; font-weight: 900; line-height: 1.3; }
+.push-demo .sub { margin-top: 4px; font-size: 14px; color: var(--muted); }
+.push-text { font-size: 15px; line-height: 1.5; color: var(--on-dark-muted); }
+.push-text b { color: #fff; }
+.push-actions { display: flex; gap: 8px; }
+.push-actions .guide-btn:not(.primary) { color: #fff; border-color: rgba(255,255,255,.4); }
+.push-actions .guide-btn.primary { background: #fff; color: var(--brand); border-color: #fff; }
+@media (min-width: 1000px) { .push-card { max-width: 860px; margin: 18px auto 0; } }

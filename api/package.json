@@ -1,0 +1,9 @@
+{
+  "name": "zman-emet-api",
+  "private": true,
+  "type": "module",
+  "description": "Dependencies of the Vercel functions only (installed by vercel.json's installCommand into api/node_modules).",
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
