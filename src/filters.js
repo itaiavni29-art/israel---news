@@ -10,7 +10,7 @@ export function buildFilter(source, globalFilters = {}, { sport = false } = {}) 
 
   /** @returns {string|null} reason for dropping, or null to keep */
   return function reject(item) {
-    if (!item.title || !item.link) return 'missing-fields';
+    if (!item.title || !/^https?:\/\//i.test(item.link ?? '')) return 'missing-fields';
     if (include.length && !include.some(r => r.test(item.link))) return 'non-news-section';
     if (exclude.some(r => r.test(item.link))) return 'excluded-section';
     if (titleExclude.some(r => r.test(item.title))) return 'excluded-title';

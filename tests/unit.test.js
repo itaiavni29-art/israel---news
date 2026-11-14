@@ -145,3 +145,31 @@ test('the breaking list mixes all the sites, a few headlines each, newest first'
   assert.equal(new Set(list.map(x => x.link)).size, list.length, 'no duplicates');
   assert.ok(list.every((x, i) => i === 0 || list[i - 1].publishedAt >= x.publishedAt), 'newest first');
 });
+
+test('Kan flashes: an item without a link points to the flash page (unique per item); with no fallback it is dropped', () => {
+  const xml = `<?xml version="1.0" encoding="utf-16"?><rss version="2.0"><channel>
+    <item><guid isPermaLink="false">abc123</guid><title>מבזק בלי קישור</title><pubDate>Sat, 14 Nov 2026 13:59:18 GMT</pubDate></item>
+    <item><guid isPermaLink="false">def456</guid><link>https://kan.org.il/content/kan-news/local/1119049/</link><title>מבזק עם כתבה</title><pubDate>Sat, 14 Nov 2026 13:25:42 GMT</pubDate></item>
+  </channel></rss>`;
+  const kan = { id: 'kan', linklessUrl: 'https://www.kan.org.il/newsflash/' };
+  const [a, b] = parseFeed(xml, kan, { now: Date.parse('2026-11-14T15:00:00Z') });
+  assert.equal(a.link, 'https://www.kan.org.il/newsflash/?item=abc123');
+  assert.equal(a.publishedAt, Date.parse('2026-11-14T13:59:18Z'));
+  assert.equal(b.link, 'https://kan.org.il/content/kan-news/local/1119049/');
+  assert.notEqual(articleKey(a.link), articleKey(parseFeed(xml.replace('abc123', 'zzz999'), kan)[0].link));
+  // a source without the fallback: the guid is not a web address, so the filter drops the item
+  const [c] = parseFeed(xml, { id: 'x' });
+  assert.equal(buildFilter({ id: 'x' })(c), 'missing-fields');
+});
+
+test('N12 (mako RSS): only the news sections pass; the photo in the description is never kept as text', () => {
+  const xml = `<rss version="2.0"><channel><item><title>כותרת</title>
+    <description>תקציר של הכתבה עם כמה מילים &lt;p&gt;&lt;img src=&apos;https://img.mako.co.il/x.jpg&apos;/&gt;&lt;/p&gt;</description>
+    <link>https://www.mako.co.il/news-military/2026_q4/Article-86d65ef1906d1a1027.htm</link><pubDate>Fri, 13 Nov 2026 20:34:00 +0200</pubDate></item></channel></rss>`;
+  const [it] = parseFeed(xml, { id: 'n12' }, { now: Date.parse('2026-11-14T15:00:00Z') });
+  assert.equal(it.publishedAt, Date.parse('2026-11-13T18:34:00Z'));
+  assert.equal(it.teaser, 'תקציר של הכתבה עם כמה מילים');
+  const reject = buildFilter({ includeUrlPatterns: ['mako\.co\.il/news-'] });
+  assert.equal(reject(it), null);
+  assert.equal(reject({ title: 'x', link: 'https://www.mako.co.il/pzm-soldiers/Article-1.htm' }), 'non-news-section');
+});

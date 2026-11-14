@@ -160,7 +160,33 @@
       "color": "#3949ab",
       "enabled": false,
       "feeds": [
-        "https://www.c14.co.il/feed"
+        "https://www.c14.co.il/feed/"
+      ]
+    },
+    {
+      "id": "kan",
+      "name": "כאן חדשות",
+      "color": "#0b7a75",
+      "enabled": true,
+      "feeds": [],
+      "breakingFeeds": [
+        "https://www.kan.org.il/api/newsflash/v2/Newsflash"
+      ],
+      "linklessUrl": "https://www.kan.org.il/newsflash/"
+    },
+    {
+      "id": "n12",
+      "name": "N12",
+      "color": "#6c2bd9",
+      "enabled": true,
+      "feeds": [
+        "https://rcs.mako.co.il/rss/news-military.xml",
+        "https://rcs.mako.co.il/rss/news-law.xml",
+        "https://rcs.mako.co.il/rss/news-world.xml",
+        "https://rcs.mako.co.il/rss/news-money.xml"
+      ],
+      "includeUrlPatterns": [
+        "mako.co.il/news-"
       ]
     },
     {

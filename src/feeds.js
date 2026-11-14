@@ -14,7 +14,7 @@ const text = v => decodeEntities(v == null ? '' : typeof v === 'object' ? (v['#t
   .replace(/^<!\[CDATA\[|\]\]>$/g, '').trim();
 
 // Bump when parseFeed starts extracting something new, so saved feed items are re-parsed once.
-const PARSER_VERSION = 3; // 2: images, 3: teasers
+const PARSER_VERSION = 4; // 2: images, 3: teasers, 4: links for linkless items
 
 export function parseFeed(xml, source, { now = Date.now() } = {}) {
   const x = parser.parse(xml);
@@ -24,9 +24,17 @@ export function parseFeed(xml, source, { now = Date.now() } = {}) {
     const image = feedImage(it);
     const title = text(it.title);
     const teaser = feedTeaser(it, title);
+    // Some items have no link of their own (Kan's flashes that are a one-line report, not an article). With
+    // `linklessUrl` they link to the site's own flash page, made unique by the item's guid so each one counts
+    // as its own item; without it they fall back to the guid, which is not a web address and gets dropped.
+    let link = text(it.link);
+    if (!/^https?:\/\//i.test(link)) {
+      const guid = text(it.guid);
+      link = source.linklessUrl && guid ? `${source.linklessUrl}?item=${encodeURIComponent(guid)}` : guid || link;
+    }
     return {
       title,
-      link: text(it.link) || text(it.guid),
+      link,
       publishedAt: normalizeDate(text(it.pubDate ?? it.published ?? it.updated ?? it['dc:date']),
         { labelIsLocalTime: !!source.dateLabelIsLocalTime, now }),
       ...(image && { image }),
